@@ -24,6 +24,8 @@ public sealed class ForgeBundle : IDisposable {
 				break;
 			}
 
+			Debug.Assert(header.CompressionType is >= ForgeCompressionType.OodleKraken and <= ForgeCompressionType.OodleSelkieOpt);
+
 			span = span[Unsafe.SizeOf<ForgeBundleHeader>()..];
 			if (header.BlockCount == 0) {
 				Streams.Add([]);
