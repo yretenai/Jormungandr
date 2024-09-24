@@ -14,6 +14,8 @@ public sealed class ForgeFile : IDisposable, IEnumerable<ObjectId> {
 			throw new InvalidDataException("Not a scimitar file");
 		}
 
+		Debug.Assert(Header.Version == 29);
+
 		BaseStream.Position = Header.FileAllocationTableOffset;
 		FileTableHeader = BaseStream.ReadExactly<ForgeCentralFileTable>();
 
