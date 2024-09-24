@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Jormungandr.IO.Structures;
@@ -7,8 +8,6 @@ using Watersports.Compression;
 namespace Jormungandr.IO;
 
 public sealed class ForgeBundle : IDisposable {
-	private static int MinimumBlockSize { get; } = Unsafe.SizeOf<ForgeBundleHeader>() + Unsafe.SizeOf<ForgeBundleBlock>() + sizeof(uint);
-
 	public ForgeBundle(ForgeFile forgeFile, ForgeFileEntry entry) {
 		File = forgeFile;
 		UId = entry.Id;
@@ -21,9 +20,13 @@ public sealed class ForgeBundle : IDisposable {
 
 		while (span.Length >= MinimumBlockSize) {
 			var header = MemoryMarshal.Read<ForgeBundleHeader>(span);
+			if (header.Magic >> 8 != 0x57FBAA) {
+				break;
+			}
+
 			span = span[Unsafe.SizeOf<ForgeBundleHeader>()..];
 			if (header.BlockCount == 0) {
-				Entries.Add([]);
+				Streams.Add([]);
 				continue;
 			}
 
@@ -38,18 +41,18 @@ public sealed class ForgeBundle : IDisposable {
 
 			// loop 2: decompress
 			var data = new PooledMemory<byte>(size);
-			Entries.Add(data);
+			Streams.Add(data);
 
 			var dataMemory = data.Memory;
 			var offset = 0;
 			memory = memory[(Unsafe.SizeOf<ForgeBundleHeader>() + Unsafe.SizeOf<ForgeBundleBlock>() * header.BlockCount)..];
 			foreach (var block in blocks) {
 				_ = MemoryMarshal.Read<uint>(span); // checksum
-				var compressedBlock = memory[4..(4 + span.Length)];
-				memory = memory[(4 + compressedBlock.Length)..];
+				var compressedBlock = memory[4..(4 + block.CompressedSize)];
+				memory = memory[(4 + block.CompressedSize)..];
 
-				offset += block.UncompressedSize;
 				var targetBlock = dataMemory.Slice(offset, block.UncompressedSize);
+				offset += block.UncompressedSize;
 
 				var compressionType = block.IsUncompressed ? ForgeCompressionType.None : header.CompressionType;
 				var helperCompressionType = compressionType switch {
@@ -75,14 +78,41 @@ public sealed class ForgeBundle : IDisposable {
 
 			span = memory.Span;
 		}
+
+		if (span.Length > 0) {
+			var remainder = new PooledMemory<byte>(span.Length);
+			span.CopyTo(remainder.Span);
+			Streams.Add(remainder);
+			Assets.Add(new SloppyMemory<byte>(remainder, 0, span.Length));
+		} else {
+			Debug.Assert(Streams.Count == 2);
+			Debug.Assert(Streams[0].Length >= Unsafe.SizeOf<ForgeBundleEntry>());
+
+			var offset = 0;
+			var dataBuffer = Streams[1];
+			foreach (var header in Headers) {
+				Assets.Add(new SloppyMemory<byte>(dataBuffer, offset, header.Size));
+				offset += header.Size;
+			}
+		}
 	}
+
+	public ForgeBundle(ForgeFile forgeFile, ObjectId uid) {
+		File = forgeFile;
+		UId = uid;
+	}
+
+	private static int MinimumBlockSize { get; } = Unsafe.SizeOf<ForgeBundleHeader>() + Unsafe.SizeOf<ForgeBundleBlock>() + sizeof(uint);
 
 	public ForgeFile File { get; }
 	public ObjectId UId { get; }
-	public List<RentedMemory<byte>> Entries { get; } = [];
+
+	public Span<ForgeBundleEntry> Headers => Streams.Count <= 2 ? [] : MemoryMarshal.Cast<byte, ForgeBundleEntry>(Streams[0].Span);
+	public List<SloppyMemory<byte>> Assets { get; } = [];
+	private List<RentedMemory<byte>> Streams { get; } = [];
 
 	public void Dispose() {
-		foreach (var entry in Entries) {
+		foreach (var entry in Streams) {
 			entry.Dispose();
 		}
 	}

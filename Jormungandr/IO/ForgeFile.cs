@@ -1,10 +1,11 @@
+using System.Collections;
 using System.Diagnostics;
 using Jormungandr.IO.Structures;
 using Jormungandr.Scimitar;
 
 namespace Jormungandr.IO;
 
-public sealed class ForgeFile : IDisposable {
+public sealed class ForgeFile : IDisposable, IEnumerable<ObjectId> {
 	public ForgeFile(Stream stream) {
 		BaseStream = stream;
 
@@ -49,4 +50,12 @@ public sealed class ForgeFile : IDisposable {
 		BaseStream.Dispose();
 		FileTables.Dispose();
 	}
+
+	public IEnumerator<ObjectId> GetEnumerator() => FileEntries.Keys.GetEnumerator();
+	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+	public ForgeBundle Open(ObjectId uid) =>
+		!FileEntries.TryGetValue(uid, out var entry)
+			? new ForgeBundle(this, uid)
+			: new ForgeBundle(this, entry);
 }

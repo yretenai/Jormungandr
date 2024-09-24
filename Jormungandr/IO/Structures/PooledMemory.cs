@@ -8,8 +8,10 @@ public sealed class PooledMemory<T>(int length) : RentedMemory<T> {
 	public override Memory<T> Memory => Owner.Memory[..Length];
 	public override Span<T> Span => Memory.Span;
 
-	public override void Dispose() {
-		Owner.Dispose();
+	protected override void Dispose(bool disposing) {
+		if (disposing) {
+			Owner.Dispose();
+		}
 	}
 
 	public override IEnumerator<T> GetEnumerator() {
