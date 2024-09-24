@@ -2,10 +2,8 @@ using Avalonia.Controls;
 
 namespace Jormungandr.Avalonia;
 
-public partial class MainWindow : Window
-{
-    public MainWindow()
-    {
-        InitializeComponent();
-    }
+internal partial class MainWindow : Window {
+	public MainWindow() {
+		InitializeComponent();
+	}
 }

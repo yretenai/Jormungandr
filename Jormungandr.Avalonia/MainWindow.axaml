@@ -5,5 +5,5 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Jormungandr.Avalonia.MainWindow"
         Title="Jormungandr.Avalonia">
-    Welcome to Avalonia!
+	Welcome to Avalonia!
 </Window>

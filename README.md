@@ -1,4 +1,4 @@
-# Jormungandr
+# Jörmungandr
 
 Forge/Scimitar Engine Tooling
 
