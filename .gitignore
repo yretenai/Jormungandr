@@ -331,3 +331,5 @@ ASALocalRun/
 
 nuget.config
 *.patch
+
+Watersports.Compression/runtimes
