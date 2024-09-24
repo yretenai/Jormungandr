@@ -55,7 +55,7 @@ public sealed class ForgeFile : IDisposable, IEnumerable<ObjectId> {
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
 	public ForgeBundle Open(ObjectId uid) =>
-		!FileEntries.TryGetValue(uid, out var entry)
-			? new ForgeBundle(this, uid)
-			: new ForgeBundle(this, entry);
+		FileEntries.TryGetValue(uid, out var entry)
+			? new ForgeBundle(this, entry)
+			: new ForgeBundle(this, uid);
 }
