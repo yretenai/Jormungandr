@@ -50,49 +50,27 @@ public sealed class ForgeBundle : IDisposable {
 
 				offset += block.UncompressedSize;
 				var targetBlock = dataMemory.Slice(offset, block.UncompressedSize);
-				if (block.IsUncompressed) {
-					compressedBlock.CopyTo(targetBlock);
-					continue;
-				}
 
-				switch (header.CompressionType) {
-					case ForgeCompressionType.Lzo1x:
-					case ForgeCompressionType.Lzo1xOpt: {
-						CompressionHelper.Decompress(CompressionType.LZO1, compressedBlock, targetBlock);
-						break;
-					}
-					case ForgeCompressionType.Lzo2a: {
-						CompressionHelper.Decompress(CompressionType.LZO2, compressedBlock, targetBlock);
-						break;
-					}
-					case ForgeCompressionType.LZ4:
-					case ForgeCompressionType.LZ4HC: {
-						CompressionHelper.Decompress(CompressionType.LZ4, compressedBlock, targetBlock);
-						break;
-					}
-					case ForgeCompressionType.OodleKraken:
-					case ForgeCompressionType.OodleKrakenOpt:
-					case ForgeCompressionType.OodleMermaid:
-					case ForgeCompressionType.OodleMermaidOpt:
-					case ForgeCompressionType.OodleSelkie:
-					case ForgeCompressionType.OodleSelkieOpt: {
-						CompressionHelper.Decompress(CompressionType.Oodle, compressedBlock, targetBlock);
-						break;
-					}
-					case ForgeCompressionType.Zlib: {
-						CompressionHelper.Decompress(CompressionType.Zlib, compressedBlock, targetBlock);
-						break;
-					}
-					case ForgeCompressionType.Zstd: {
-						CompressionHelper.Decompress(CompressionType.Zstd, compressedBlock, targetBlock);
-						break;
-					}
-					case ForgeCompressionType.None: {
-						compressedBlock.CopyTo(targetBlock);
-						break;
-					}
-					default: throw new NotSupportedException();
-				}
+				var compressionType = block.IsUncompressed ? ForgeCompressionType.None : header.CompressionType;
+				var helperCompressionType = compressionType switch {
+					                            ForgeCompressionType.Lzo1x => CompressionType.LZO1,
+					                            ForgeCompressionType.Lzo1xOpt => CompressionType.LZO1,
+					                            ForgeCompressionType.Lzo2a => CompressionType.LZO2,
+					                            ForgeCompressionType.LZ4 => CompressionType.LZ4,
+					                            ForgeCompressionType.LZ4HC => CompressionType.LZ4,
+					                            ForgeCompressionType.OodleKraken => CompressionType.Oodle,
+					                            ForgeCompressionType.OodleKrakenOpt => CompressionType.Oodle,
+					                            ForgeCompressionType.OodleMermaid => CompressionType.Oodle,
+					                            ForgeCompressionType.OodleMermaidOpt => CompressionType.Oodle,
+					                            ForgeCompressionType.OodleSelkie => CompressionType.Oodle,
+					                            ForgeCompressionType.OodleSelkieOpt => CompressionType.Oodle,
+					                            ForgeCompressionType.None => CompressionType.None,
+					                            ForgeCompressionType.Zlib => CompressionType.Zlib,
+					                            ForgeCompressionType.Zstd => CompressionType.Zstd,
+					                            _ => throw new NotSupportedException(),
+				                            };
+
+				CompressionHelper.Decompress(helperCompressionType, compressedBlock, targetBlock);
 			}
 
 			span = memory.Span;
