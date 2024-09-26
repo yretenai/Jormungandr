@@ -34,9 +34,9 @@ public sealed class ForgeBundle : IDisposable {
 				throw new InvalidOperationException();
 			}
 
-			if (dataOffset == entry.Size) {
+			var entryCount = MemoryMarshal.Read<ushort>(HeaderStream.Span);
+			if (dataOffset == entry.Size || entryCount == 0) {
 				HeaderStream.Dispose();
-				HeaderStream = RentedMemory<byte>.Empty;
 				DataStream = RentedMemory<byte>.Empty;
 				Headers = RentedMemory<ForgeBundleEntry>.Empty;
 				return;
@@ -52,10 +52,21 @@ public sealed class ForgeBundle : IDisposable {
 			}
 
 			var offset = 0;
-			Headers = new CastMemory<ForgeBundleEntry, byte>(HeaderStream, 0, HeaderStream.Length / Unsafe.SizeOf<ForgeBundleEntry>());
-			foreach (var header in Headers) {
+			var headerOffset = 2;
+			Headers = new PooledMemory<ForgeBundleEntry>(entryCount);
+			var headerSpan = HeaderStream.Span;
+			for (var i = 0; i < entryCount; ++i) {
+				var header = MemoryMarshal.Read<ForgeBundleEntry>(headerSpan[headerOffset..]);
+				Headers.Span[i] = header;
+				headerOffset += Unsafe.SizeOf<ForgeBundleEntry>();
 				Assets.Add(new SloppyMemory<byte>(DataStream, offset, header.Size));
 				offset += header.Size;
+				if (header.DependencyCount > 0) {
+					Dependencies.Add(new CastMemory<ushort, byte>(HeaderStream, headerOffset, header.DependencyCount << 1));
+					headerOffset += header.DependencyCount << 1;
+				} else {
+					Dependencies.Add(RentedMemory<ushort>.Empty);
+				}
 			}
 		} finally {
 			buffer.Dispose();
@@ -73,6 +84,7 @@ public sealed class ForgeBundle : IDisposable {
 	public ObjectId UId { get; }
 
 	public RentedMemory<ForgeBundleEntry> Headers { get; }
+	public List<RentedMemory<ushort>> Dependencies { get; } = [];
 	public List<RentedMemory<byte>> Assets { get; } = [];
 	private RentedMemory<byte> DataStream { get; }
 	private RentedMemory<byte>? HeaderStream { get; }
@@ -83,6 +95,7 @@ public sealed class ForgeBundle : IDisposable {
 		}
 
 		Assets.Clear();
+		Dependencies.Clear();
 		Headers.Dispose();
 		DataStream.Dispose();
 		HeaderStream?.Dispose();
