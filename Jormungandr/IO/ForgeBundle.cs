@@ -34,6 +34,14 @@ public sealed class ForgeBundle : IDisposable {
 				throw new InvalidOperationException();
 			}
 
+			if (dataOffset == entry.Size) {
+				HeaderStream.Dispose();
+				HeaderStream = RentedMemory<byte>.Empty;
+				DataStream = RentedMemory<byte>.Empty;
+				Headers = RentedMemory<ForgeBundleEntry>.Empty;
+				return;
+			}
+
 			DataStream = ReadBlock(buffer.Memory[dataOffset..], out var endOffset);
 			if (endOffset == 0) {
 				throw new InvalidOperationException();
@@ -80,7 +88,7 @@ public sealed class ForgeBundle : IDisposable {
 		HeaderStream?.Dispose();
 	}
 
-	private RentedMemory<byte> ReadBlock(Memory<byte> memory, out int readBytes) {
+	private static RentedMemory<byte> ReadBlock(Memory<byte> memory, out int readBytes) {
 		var span = memory.Span;
 		readBytes = 0;
 
@@ -88,6 +96,8 @@ public sealed class ForgeBundle : IDisposable {
 		if (header.Magic >> 8 != 0x57FBAA) {
 			return RentedMemory<byte>.Empty;
 		}
+
+		Debug.Assert((header.Magic & 0xFF) == 0x33); // i suspect this byte is actually the compression type code and CompressionType is actually flags.
 
 		readBytes += Unsafe.SizeOf<ForgeBundleHeader>();
 
