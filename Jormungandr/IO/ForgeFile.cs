@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Diagnostics;
+using Jormungandr.IO.Buffers;
 using Jormungandr.IO.Structures;
 using Jormungandr.Scimitar;
 

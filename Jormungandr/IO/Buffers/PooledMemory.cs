@@ -1,8 +1,9 @@
 using System.Buffers;
 
-namespace Jormungandr.IO.Structures;
+namespace Jormungandr.IO.Buffers;
 
-public sealed class PooledMemory<T>(int length) : RentedMemory<T> {
+// owning rented memory owner.
+public sealed class PooledMemory<T>(int length) : RentedMemory<T> where T : struct {
 	public override int Length { get; } = length;
 	public IMemoryOwner<T> Owner { get; } = MemoryPool<T>.Shared.Rent(length);
 	public override Memory<T> Memory => Owner.Memory[..Length];
@@ -11,12 +12,6 @@ public sealed class PooledMemory<T>(int length) : RentedMemory<T> {
 	protected override void Dispose(bool disposing) {
 		if (disposing) {
 			Owner.Dispose();
-		}
-	}
-
-	public override IEnumerator<T> GetEnumerator() {
-		for (var i = 0; i < Length; ++i) {
-			yield return Memory.Span[i];
 		}
 	}
 }

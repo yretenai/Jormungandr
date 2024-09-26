@@ -1,6 +1,7 @@
-namespace Jormungandr.IO.Structures;
+namespace Jormungandr.IO.Buffers;
 
-public class SloppyMemory<T>(RentedMemory<T> Owner, int Offset, int Length) : RentedMemory<T> {
+// non owning hazardous memory owner.
+public class SloppyMemory<T>(RentedMemory<T> Owner, int Offset, int Length) : RentedMemory<T> where T : struct {
 	public RentedMemory<T> Owner { get; } = Owner;
 	public override int Length { get; } = Length;
 	public int Offset { get; } = Offset;

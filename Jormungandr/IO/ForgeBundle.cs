@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Jormungandr.IO.Buffers;
 using Jormungandr.IO.Structures;
 using Jormungandr.Scimitar;
 using Watersports.Compression;
@@ -12,110 +13,134 @@ public sealed class ForgeBundle : IDisposable {
 		File = forgeFile;
 		UId = entry.Id;
 
-		using var buffer = new PooledMemory<byte>(entry.Size);
-		var memory = buffer.Memory;
+		var buffer = new PooledMemory<byte>(entry.Size);
 		var span = buffer.Span;
 		File.BaseStream.Position = entry.Offset;
 		File.BaseStream.ReadExactly(span);
-
-		while (span.Length >= MinimumBlockSize) {
-			var header = MemoryMarshal.Read<ForgeBundleHeader>(span);
-			if (header.Magic >> 8 != 0x57FBAA) {
-				break;
-			}
-
-			Debug.Assert(header.CompressionType is >= ForgeCompressionType.OodleKraken and <= ForgeCompressionType.OodleSelkieOpt);
-
-			span = span[Unsafe.SizeOf<ForgeBundleHeader>()..];
-			if (header.BlockCount == 0) {
-				Streams.Add([]);
-				continue;
-			}
-
-			var blocks = MemoryMarshal.Cast<byte, ForgeBundleBlock>(span)[..header.BlockCount];
-			span = span[(Unsafe.SizeOf<ForgeBundleBlock>() * header.BlockCount)..];
-
-			// loop 1: get total size
-			var size = 0;
-			foreach (var block in blocks) {
-				size += block.UncompressedSize;
-			}
-
-			// loop 2: decompress
-			var data = new PooledMemory<byte>(size);
-			Streams.Add(data);
-
-			var dataMemory = data.Memory;
-			var offset = 0;
-			memory = memory[(Unsafe.SizeOf<ForgeBundleHeader>() + Unsafe.SizeOf<ForgeBundleBlock>() * header.BlockCount)..];
-			foreach (var block in blocks) {
-				_ = MemoryMarshal.Read<uint>(span); // checksum
-				var compressedBlock = memory[4..(4 + block.CompressedSize)];
-				memory = memory[(4 + block.CompressedSize)..];
-
-				var targetBlock = dataMemory.Slice(offset, block.UncompressedSize);
-				offset += block.UncompressedSize;
-
-				var compressionType = block.IsUncompressed ? ForgeCompressionType.None : header.CompressionType;
-				var helperCompressionType = compressionType switch {
-					                            ForgeCompressionType.Lzo1x => CompressionType.LZO1,
-					                            ForgeCompressionType.Lzo1xOpt => CompressionType.LZO1,
-					                            ForgeCompressionType.Lzo2a => CompressionType.LZO2,
-					                            ForgeCompressionType.LZ4 => CompressionType.LZ4,
-					                            ForgeCompressionType.LZ4HC => CompressionType.LZ4,
-					                            ForgeCompressionType.OodleKraken => CompressionType.Oodle,
-					                            ForgeCompressionType.OodleKrakenOpt => CompressionType.Oodle,
-					                            ForgeCompressionType.OodleMermaid => CompressionType.Oodle,
-					                            ForgeCompressionType.OodleMermaidOpt => CompressionType.Oodle,
-					                            ForgeCompressionType.OodleSelkie => CompressionType.Oodle,
-					                            ForgeCompressionType.OodleSelkieOpt => CompressionType.Oodle,
-					                            ForgeCompressionType.None => CompressionType.None,
-					                            ForgeCompressionType.Zlib => CompressionType.Zlib,
-					                            ForgeCompressionType.Zstd => CompressionType.Zstd,
-					                            _ => throw new NotSupportedException(),
-				                            };
-
-				CompressionHelper.Decompress(helperCompressionType, compressedBlock, targetBlock);
-			}
-
-			span = memory.Span;
+		if (MemoryMarshal.Read<uint>(span) >> 8 != 0x57FBAA) {
+			Headers = new PooledMemory<ForgeBundleEntry>(1);
+			Headers.Span[0] = new ForgeBundleEntry {
+				ObjectId = UId,
+				Size = span.Length,
+			};
+			DataStream = buffer;
+			Assets.Add(DataStream);
+			return;
 		}
 
-		if (span.Length > 0) {
-			var remainder = new PooledMemory<byte>(span.Length);
-			span.CopyTo(remainder.Span);
-			Streams.Add(remainder);
-			Assets.Add(new SloppyMemory<byte>(remainder, 0, span.Length));
-		} else {
-			Debug.Assert(Streams.Count == 2);
-			Debug.Assert(Streams[0].Length >= Unsafe.SizeOf<ForgeBundleEntry>());
+		try {
+			HeaderStream = ReadBlock(buffer.Memory, out var dataOffset);
+			if (dataOffset == 0) {
+				throw new InvalidOperationException();
+			}
+
+			DataStream = ReadBlock(buffer.Memory[dataOffset..], out var endOffset);
+			if (endOffset == 0) {
+				throw new InvalidOperationException();
+			}
+
+			if (dataOffset + endOffset != entry.Size) {
+				throw new InvalidDataException();
+			}
 
 			var offset = 0;
-			var dataBuffer = Streams[1];
+			Headers = new CastMemory<ForgeBundleEntry>(HeaderStream, 0, HeaderStream.Length / Unsafe.SizeOf<ForgeBundleEntry>());
 			foreach (var header in Headers) {
-				Assets.Add(new SloppyMemory<byte>(dataBuffer, offset, header.Size));
+				Assets.Add(new SloppyMemory<byte>(DataStream, offset, header.Size));
 				offset += header.Size;
 			}
+		} finally {
+			buffer.Dispose();
 		}
 	}
 
 	public ForgeBundle(ForgeFile forgeFile, ObjectId uid) {
 		File = forgeFile;
 		UId = uid;
+		DataStream = RentedMemory<byte>.Empty;
+		Headers = RentedMemory<ForgeBundleEntry>.Empty;
 	}
-
-	private static int MinimumBlockSize { get; } = Unsafe.SizeOf<ForgeBundleHeader>() + Unsafe.SizeOf<ForgeBundleBlock>() + sizeof(uint);
 
 	public ForgeFile File { get; }
 	public ObjectId UId { get; }
 
-	public Span<ForgeBundleEntry> Headers => Streams.Count <= 2 ? [] : MemoryMarshal.Cast<byte, ForgeBundleEntry>(Streams[0].Span);
-	public List<SloppyMemory<byte>> Assets { get; } = [];
-	private List<RentedMemory<byte>> Streams { get; } = [];
+	public RentedMemory<ForgeBundleEntry> Headers { get; }
+	public List<RentedMemory<byte>> Assets { get; } = [];
+	private RentedMemory<byte> DataStream { get; }
+	private RentedMemory<byte>? HeaderStream { get; }
 
 	public void Dispose() {
-		foreach (var entry in Streams) {
-			entry.Dispose();
+		foreach (var asset in Assets) {
+			asset.Dispose();
 		}
+
+		Assets.Clear();
+		Headers.Dispose();
+		DataStream.Dispose();
+		HeaderStream?.Dispose();
+	}
+
+	private RentedMemory<byte> ReadBlock(Memory<byte> memory, out int readBytes) {
+		var span = memory.Span;
+		readBytes = 0;
+
+		var header = MemoryMarshal.Read<ForgeBundleHeader>(span);
+		if (header.Magic >> 8 != 0x57FBAA) {
+			return RentedMemory<byte>.Empty;
+		}
+
+		readBytes += Unsafe.SizeOf<ForgeBundleHeader>();
+
+		Debug.Assert(header.CompressionType is >= ForgeCompressionType.OodleKraken and <= ForgeCompressionType.OodleSelkieOpt);
+
+		if (header.BlockCount == 0) {
+			return RentedMemory<byte>.Empty;
+		}
+
+		var blocks = MemoryMarshal.Cast<byte, ForgeBundleBlock>(span[readBytes..])[..header.BlockCount];
+		readBytes += Unsafe.SizeOf<ForgeBundleBlock>() * header.BlockCount;
+
+		// loop 1: get total size
+		var size = 0;
+		foreach (var block in blocks) {
+			size += block.UncompressedSize;
+		}
+
+		// loop 2: decompress
+		var data = new PooledMemory<byte>(size);
+
+		var dataMemory = data.Memory;
+		var offset = 0;
+		foreach (var block in blocks) {
+			_ = MemoryMarshal.Read<uint>(span); // checksum
+			var compressedBlock = memory.Slice(readBytes + 4, block.CompressedSize);
+			readBytes += 4 + block.CompressedSize;
+
+			var targetBlock = dataMemory.Slice(offset, block.UncompressedSize);
+			offset += block.UncompressedSize;
+
+			var compressionType = block.IsUncompressed ? ForgeCompressionType.None : header.CompressionType;
+			var helperCompressionType = compressionType switch {
+				                            ForgeCompressionType.Lzo1x => CompressionType.LZO1,
+				                            ForgeCompressionType.Lzo1xOpt => CompressionType.LZO1,
+				                            ForgeCompressionType.Lzo2a => CompressionType.LZO2,
+				                            ForgeCompressionType.LZ4 => CompressionType.LZ4,
+				                            ForgeCompressionType.LZ4HC => CompressionType.LZ4,
+				                            ForgeCompressionType.OodleKraken => CompressionType.Oodle,
+				                            ForgeCompressionType.OodleKrakenOpt => CompressionType.Oodle,
+				                            ForgeCompressionType.OodleMermaid => CompressionType.Oodle,
+				                            ForgeCompressionType.OodleMermaidOpt => CompressionType.Oodle,
+				                            ForgeCompressionType.OodleSelkie => CompressionType.Oodle,
+				                            ForgeCompressionType.OodleSelkieOpt => CompressionType.Oodle,
+				                            ForgeCompressionType.None => CompressionType.None,
+				                            ForgeCompressionType.Zlib => CompressionType.Zlib,
+				                            ForgeCompressionType.Zstd => CompressionType.Zstd,
+				                            _ => throw new NotSupportedException(),
+			                            };
+
+			CompressionHelper.Decompress(helperCompressionType, compressedBlock, targetBlock);
+		}
+
+		return data;
 	}
 }

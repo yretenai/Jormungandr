@@ -1,8 +1,9 @@
 using System.Collections;
 
-namespace Jormungandr.IO.Structures;
+namespace Jormungandr.IO.Buffers;
 
-public class RentedMemory<T> : IDisposable, IEnumerable<T> {
+// owning zero length memory owner.
+public class RentedMemory<T> : IDisposable, IEnumerable<T> where T : struct {
 	public static RentedMemory<T> Empty { get; } = new();
 
 	public virtual int Length => 0;
@@ -14,7 +15,12 @@ public class RentedMemory<T> : IDisposable, IEnumerable<T> {
 		GC.SuppressFinalize(this);
 	}
 
-	public virtual IEnumerator<T> GetEnumerator() => Enumerable.Empty<T>().GetEnumerator();
+	public virtual IEnumerator<T> GetEnumerator() {
+		for (var i = 0; i < Length; ++i) {
+			yield return Span[i];
+		}
+	}
+
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
 	protected virtual void Dispose(bool disposing) {
