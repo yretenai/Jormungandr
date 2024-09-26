@@ -5,7 +5,7 @@ public class CastMemory<T>(RentedMemory<byte> Owner, int Offset, int Length) : R
 	public RentedMemory<byte> Owner { get; } = Owner;
 	public override int Length { get; } = Length;
 	public int Offset { get; } = Offset;
-	public TypedMemory<T> Typed { get; private set; } = new(Owner.Memory);
+	public MemoryTypeManager<T> Typed { get; private set; } = new(Owner.Memory);
 	public override Span<T> Span => Memory.Span;
 	public override Memory<T> Memory => Typed.Memory.Slice(Offset, Length);
 

@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace Jormungandr.IO.Buffers;
 
 // memory manager for casting memory
-public class TypedMemory<T>(Memory<byte> buffer) : MemoryManager<T> where T : struct {
+public class MemoryTypeManager<T>(Memory<byte> buffer) : MemoryManager<T> where T : struct {
 	private MemoryHandle? Handle { get; set; }
 	private int RefCount { get; set; }
 	private Memory<byte> Buffer { get; set; } = buffer;
