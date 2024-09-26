@@ -17,7 +17,7 @@ public sealed class ForgeBundle : IDisposable {
 		var span = buffer.Span;
 		File.BaseStream.Position = entry.Offset;
 		File.BaseStream.ReadExactly(span);
-		if (MemoryMarshal.Read<uint>(span) >> 8 != 0x57FBAA) {
+		if (MemoryMarshal.Read<uint>(span) >> 8 != ForgeBundleIdentifier.MAGIC) {
 			Headers = new PooledMemory<ForgeBundleEntry>(1);
 			Headers.Span[0] = new ForgeBundleEntry {
 				ObjectId = UId,
@@ -93,11 +93,13 @@ public sealed class ForgeBundle : IDisposable {
 		readBytes = 0;
 
 		var header = MemoryMarshal.Read<ForgeBundleHeader>(span);
-		if (header.Magic >> 8 != 0x57FBAA) {
+		if (header.Identifier.Magic != ForgeBundleIdentifier.MAGIC) {
 			return RentedMemory<byte>.Empty;
 		}
 
-		Debug.Assert((header.Magic & 0xFF) == 0x33); // i suspect this byte is actually the compression type code and CompressionType is actually flags.
+		if (header.Identifier.ContainerType != ForgeBundleIdentifier.CONTAINER_MAGIC) {
+			return RentedMemory<byte>.Empty;
+		}
 
 		readBytes += Unsafe.SizeOf<ForgeBundleHeader>();
 
@@ -144,7 +146,8 @@ public sealed class ForgeBundle : IDisposable {
 				                            ForgeCompressionType.OodleSelkieOpt => CompressionType.Oodle,
 				                            ForgeCompressionType.None => CompressionType.None,
 				                            ForgeCompressionType.Zlib => CompressionType.Zlib,
-				                            ForgeCompressionType.Zstd => CompressionType.Zstd,
+				                            ForgeCompressionType.ZStandard => CompressionType.Zstd,
+				                            ForgeCompressionType.ZStandardOpt => CompressionType.Zstd,
 				                            _ => throw new NotSupportedException(),
 			                            };
 

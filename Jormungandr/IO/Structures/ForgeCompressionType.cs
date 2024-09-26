@@ -15,9 +15,6 @@ public enum ForgeCompressionType : byte {
 	OodleSelkieOpt,
 	None,
 	Zlib,
-	Zstd,
-
-	// Zstd is added in version 30, replaces Lz4.
-	// in Version 28, Zstd is is Oodle
-	// in Version 27 and prior, anything past LZ4HC doesn't exist
+	ZStandard,
+	ZStandardOpt,
 }

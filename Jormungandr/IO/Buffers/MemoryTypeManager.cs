@@ -7,12 +7,12 @@ namespace Jormungandr.IO.Buffers;
 // memory manager for casting memory
 public class MemoryTypeManager<TTo, TFrom>(Memory<TFrom> buffer) : MemoryManager<TTo> where TTo : struct
                                                                                       where TFrom : struct {
+	private static readonly int ToSize = Unsafe.SizeOf<TTo>();
+	private static readonly int FromSize = Unsafe.SizeOf<TFrom>();
 	private MemoryHandle? Handle { get; set; }
 	private int RefCount { get; set; }
 	private Memory<TFrom> Buffer { get; set; } = buffer;
 	private bool Disposed { get; set; }
-	private static readonly int ToSize = Unsafe.SizeOf<TTo>();
-	private static readonly int FromSize = Unsafe.SizeOf<TFrom>();
 	public int ByteSize { get; } = buffer.Length * FromSize;
 
 	public override Span<TTo> GetSpan() {
