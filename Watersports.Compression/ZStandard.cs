@@ -184,9 +184,7 @@ public sealed partial class ZStandard : IDisposable {
 		return null;
 	}
 
-	public static int GetCompressBound(Memory<byte> bytes) {
-		return (int) NativeMethods.ZSTD_compressBound(bytes.Length);
-	}
+	public static int GetCompressBound(Memory<byte> bytes) => (int) NativeMethods.ZSTD_compressBound(bytes.Length);
 
 	public static unsafe int GetDecompressBound(Memory<byte> bytes) {
 		using var pin = bytes.Pin();

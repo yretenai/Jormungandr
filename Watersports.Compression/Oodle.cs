@@ -8,18 +8,6 @@ using Serilog;
 namespace Watersports.Compression;
 
 public static partial class Oodle {
-	public enum OodleLZ_Profile {
-		OodleLZ_Profile_Main = 0, // Main profile (all current features allowed)
-		OodleLZ_Profile_Reduced = 1, // Reduced profile (Kraken only, limited feature set)
-	}
-
-	public enum OodleLZ_Jobify {
-		Default = 0, // Use compressor default for level of internal job usage
-		Disable = 1, // Don't use jobs at all
-		Normal = 2, // Try to balance parallelism with increased memory usage
-		Aggressive = 3, // Maximize parallelism even when doing so requires large amounts of memory
-	}
-
 	public enum OodleLZ_CompressionLevel {
 		None = 0, // don't compress, just copy raw bytes
 		SuperFast = 1, // super fast mode, lower compression ratio
@@ -69,6 +57,18 @@ public static partial class Oodle {
 		ThreadPhase2 = 2,
 		ThreadPhaseAll = 3,
 		Unthreaded = ThreadPhaseAll,
+	}
+
+	public enum OodleLZ_Jobify {
+		Default = 0, // Use compressor default for level of internal job usage
+		Disable = 1, // Don't use jobs at all
+		Normal = 2, // Try to balance parallelism with increased memory usage
+		Aggressive = 3, // Maximize parallelism even when doing so requires large amounts of memory
+	}
+
+	public enum OodleLZ_Profile {
+		OodleLZ_Profile_Main = 0, // Main profile (all current features allowed)
+		OodleLZ_Profile_Reduced = 1, // Reduced profile (Kraken only, limited feature set)
 	}
 
 	public enum OodleLZ_Verbosity {
@@ -196,13 +196,9 @@ public static partial class Oodle {
 		return options;
 	}
 
-	public static int GetDecodeBufferSize(Memory<byte> input, bool corruptionPossible) {
-		return (int) NativeMethods.OodleLZ_GetDecodeBufferSize(GetCompressor(input), input.Length, corruptionPossible);
-	}
+	public static int GetDecodeBufferSize(Memory<byte> input, bool corruptionPossible) => (int) NativeMethods.OodleLZ_GetDecodeBufferSize(GetCompressor(input), input.Length, corruptionPossible);
 
-	public static int GetCompressedBufferSize(OodleLZ_Compressor compressor, int length) {
-		return (int) NativeMethods.OodleLZ_GetCompressedBufferSizeNeeded(compressor, length);
-	}
+	public static int GetCompressedBufferSize(OodleLZ_Compressor compressor, int length) => (int) NativeMethods.OodleLZ_GetCompressedBufferSizeNeeded(compressor, length);
 
 	public static unsafe OodleLZ_Compressor GetCompressor(Memory<byte> input) {
 		using var inPin = input.Pin();
