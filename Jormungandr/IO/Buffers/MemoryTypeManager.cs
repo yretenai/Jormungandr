@@ -5,15 +5,19 @@ using System.Runtime.InteropServices;
 namespace Jormungandr.IO.Buffers;
 
 // memory manager for casting memory
-public class MemoryTypeManager<T>(Memory<byte> buffer) : MemoryManager<T> where T : struct {
+public class MemoryTypeManager<TTo, TFrom>(Memory<TFrom> buffer) : MemoryManager<TTo> where TTo : struct
+                                                                                      where TFrom : struct {
 	private MemoryHandle? Handle { get; set; }
 	private int RefCount { get; set; }
-	private Memory<byte> Buffer { get; set; } = buffer;
+	private Memory<TFrom> Buffer { get; set; } = buffer;
 	private bool Disposed { get; set; }
+	private static readonly int ToSize = Unsafe.SizeOf<TTo>();
+	private static readonly int FromSize = Unsafe.SizeOf<TFrom>();
+	public int ByteSize { get; } = buffer.Length * FromSize;
 
-	public override Span<T> GetSpan() {
+	public override Span<TTo> GetSpan() {
 		ObjectDisposedException.ThrowIf(Disposed, this);
-		return MemoryMarshal.Cast<byte, T>(Buffer.Span);
+		return MemoryMarshal.Cast<TFrom, TTo>(Buffer.Span);
 	}
 
 	public override MemoryHandle Pin(int elementIndex = 0) {
@@ -22,8 +26,10 @@ public class MemoryTypeManager<T>(Memory<byte> buffer) : MemoryManager<T> where 
 			throw new IndexOutOfRangeException();
 		}
 
-		var byteIndex = Unsafe.SizeOf<T>() * elementIndex;
-		if (byteIndex >= Buffer.Length) { }
+		var byteIndex = ToSize * elementIndex * FromSize;
+		if (byteIndex >= ByteSize) {
+			throw new IndexOutOfRangeException();
+		}
 
 		RefCount++;
 		Handle ??= Memory.Pin();
@@ -43,7 +49,7 @@ public class MemoryTypeManager<T>(Memory<byte> buffer) : MemoryManager<T> where 
 		}
 	}
 
-	protected override bool TryGetArray(out ArraySegment<T> segment) {
+	protected override bool TryGetArray(out ArraySegment<TTo> segment) {
 		ObjectDisposedException.ThrowIf(Disposed, this);
 		return MemoryMarshal.TryGetArray(Memory, out segment);
 	}

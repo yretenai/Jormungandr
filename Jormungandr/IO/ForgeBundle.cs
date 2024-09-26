@@ -44,7 +44,7 @@ public sealed class ForgeBundle : IDisposable {
 			}
 
 			var offset = 0;
-			Headers = new CastMemory<ForgeBundleEntry>(HeaderStream, 0, HeaderStream.Length / Unsafe.SizeOf<ForgeBundleEntry>());
+			Headers = new CastMemory<ForgeBundleEntry, byte>(HeaderStream, 0, HeaderStream.Length / Unsafe.SizeOf<ForgeBundleEntry>());
 			foreach (var header in Headers) {
 				Assets.Add(new SloppyMemory<byte>(DataStream, offset, header.Size));
 				offset += header.Size;
