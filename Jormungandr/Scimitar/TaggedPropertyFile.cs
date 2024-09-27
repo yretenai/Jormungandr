@@ -12,15 +12,13 @@ public class TaggedPropertyFile {
 		UId = uid;
 
 		using var reader = new MemoryReader(buffer, false);
-		Header = new PropertyHeader(reader);
-		Tag = reader.Read<uint>();
-		Debug.Assert(Header.Tag == Tag);
-		Debug.Assert(Header.UId == UId);
-
+		Header = new PropertyHeader(UId, reader);
+		if (Header.UId != default) {
+			Debug.Assert(Header.UId == UId);
+		}
 		// todo: load properties.
 	}
 
-	public uint Tag { get; }
 	public PropertyHeader Header { get; }
 	public ForgeBundle Bundle { get; }
 	public RentedMemory<byte> Buffer { get; }

@@ -28,6 +28,8 @@ public sealed class ForgeBundle : IDisposable {
 			return;
 		}
 
+		IsDataStream = true;
+
 		try {
 			HeaderStream = ReadBlock(buffer.Memory, out var dataOffset);
 			if (dataOffset == 0) {
@@ -88,6 +90,7 @@ public sealed class ForgeBundle : IDisposable {
 	public List<RentedMemory<byte>> Assets { get; } = [];
 	private RentedMemory<byte> DataStream { get; }
 	private RentedMemory<byte>? HeaderStream { get; }
+	public bool IsDataStream { get; }
 
 	public void Dispose() {
 		foreach (var asset in Assets) {
