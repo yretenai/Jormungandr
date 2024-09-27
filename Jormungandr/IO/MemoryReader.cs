@@ -82,7 +82,9 @@ public sealed class MemoryReader(RentedMemory<byte> Buffer, bool DisposeOnExit =
 
 		var bytes = ReadBytes(size);
 		if (flags.HasFlagFast(StringFlags.BlockEncrypted)) {
-			// todo
+			// i assume this is a 128-bit block cipher as the string is aligned to 16-bytes.
+			// on the plus side, it does not appear to be using tweak keys like the old cipher.
+			// todo: find aes/blowfish cipher keys
 		} else if (flags.HasFlagFast(StringFlags.StepEncrypted)) {
 			isEncrypted = false;
 			StepEncoder.Decode(bytes.Span, size, tag, uid.Value);
