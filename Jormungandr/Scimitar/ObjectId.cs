@@ -8,6 +8,6 @@ public readonly record struct ObjectId(ulong Value) {
 	public override string ToString() => $"0x{LocalId:x12}:0x{ExportId:X6}";
 
 	public int PrincipalId => (int) (Value & 0xFFFF);
-	public int LocalId => (int) (Value & 0x7FFFFFFFFFF);
+	public long LocalId => (long) (Value & 0x7FFFFFFFFFF);
 	public int ExportId => (int) (Value >> 43);
 }
