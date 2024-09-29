@@ -433,7 +433,7 @@ class RTTIBlob():
 	def load_stack(self, functions):
 		for func in functions:
 			for site in func.callers:
-				for callee in site.function.callees:
+				for callee in site.callees:
 					if callee.name == "TagAddClass" or callee.name == "TagAddEnum":
 						self.load_registration(callee)
 						break
