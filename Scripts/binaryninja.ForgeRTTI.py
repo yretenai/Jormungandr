@@ -1,3 +1,5 @@
+CLASS_HAS_NAME = True
+
 def read_pointer(reader):
 	if bv.arch.address_size == 1:
 		return reader.read8()
@@ -204,6 +206,7 @@ class ClassRTTI:
 	methods: [MethodRTTI]
 	parent_hash: int
 	class_hash: int
+	name: str
 	size: int
 	flags: int
 	field_flags: int
@@ -240,6 +243,13 @@ class ClassRTTI:
 		enums_address = read_pointer(reader)
 		methods_address = read_pointer(reader)
 
+		if CLASS_HAS_NAME:
+			val = bv.get_ascii_string_at(read_pointer(reader), 0)
+			if val is not None:
+				self.name = val.value
+			else:
+				self.name = ""
+
 		self.parent_hash = reader.read32()
 		self.class_hash = reader.read32()
 		self.size = reader.read32()
@@ -251,6 +261,9 @@ class ClassRTTI:
 		self.field_38 = reader.read32()
 		self.field_3c = reader.read32()
 		self.field_40 = reader.read32()
+		if CLASS_HAS_NAME:
+			self.field_44old = reader.read32()
+			self.field_40old = reader.read32()
 		self.field_44 = reader.read16()
 		self.field_46 = reader.read16()
 
@@ -292,6 +305,7 @@ class ClassRTTI:
 			self.methods[index] = MethodRTTI(methods_address)
 			methods_address += method_size
 
+visited = set()
 
 class RTTIBlob():
 	classes: dict[int, ClassRTTI]
@@ -310,6 +324,9 @@ class RTTIBlob():
 	def add_class(self, address: int):
 		if address == 0:
 			return
+		if address in visited:
+			return
+		visited.add(address)
 		print('loading class from address 0x%x' % (address))
 		rtti = ClassRTTI(address, self)
 		self.classes[rtti.class_hash] = rtti
@@ -318,6 +335,9 @@ class RTTIBlob():
 	def add_enum(self, address: int):
 		if address == 0:
 			return
+		if address in visited:
+			return
+		visited.add(address)
 		print('loading enum from address 0x%x' % (address))
 		rtti = EnumRTTI(address)
 		self.enums[rtti.name_hash] = rtti
@@ -326,6 +346,9 @@ class RTTIBlob():
 	def add_name(self, address: int):
 		if address == 0:
 			return
+		if address in visited:
+			return
+		visited.add(address)
 		print('loading name from address 0x%x' % (address))
 		val = bv.get_ascii_string_at(address, 0)
 		if val is not None:
@@ -399,35 +422,47 @@ class RTTIBlob():
 					self.add_enum(dest)
 
 
-	def load_registration(self, functions):
+	def load_registrations(self, functions):
 		for func in functions:
 			for site in func.caller_sites:
 				dest = self.get_address_from_call(site.hlil, 2)
 				if dest == 0: continue
-				reg = bv.get_function_at(dest)
-				if reg is None or reg.hlil is None:
-					print("aaah!!! analyze 0x%x" % (site.address))
-					continue
-				addresses = []
-				for hlil in reg.hlil.instructions:
-					if hlil.operation == HighLevelILOperation.HLIL_VAR_INIT or hlil.operation == HighLevelILOperation.HLIL_ASSIGN:
-						var_addr = self.get_address_from_assign(hlil, 1)
-						if var_addr == 0:
-							var_addr = self.get_address_from_assign(hlil, 0)
-						addresses.append(var_addr)
-						continue
-					if not is_call(hlil.operation): continue
-					call_addr = self.get_address_from_call(hlil, 0)
-					if call_addr == 0: continue
-					call_name = bv.get_function_at(call_addr).name
-					if call_name == 'TagAddClass':
-						for address in addresses:
-							self.add_class(address)
-						addresses = []
-					elif call_name == 'TagAddEnum':
-						for address in addresses:
-							self.add_enum(address)
+				self.load_registration(bv.get_function_at(dest))
+
+
+	def load_stack(self, functions):
+		for func in functions:
+			for site in func.callers:
+				for callee in site.function.callees:
+					if callee.name == "TagAddClass" or callee.name == "TagAddEnum":
+						self.load_registration(callee)
 						break
+
+
+	def load_registration(self, reg):
+		if reg is None or reg.hlil is None:
+			print("aaah!!! analyze 0x%x" % (site.address))
+			return
+		addresses = []
+		for hlil in reg.hlil.instructions:
+			if hlil.operation == HighLevelILOperation.HLIL_VAR_INIT or hlil.operation == HighLevelILOperation.HLIL_ASSIGN:
+				var_addr = self.get_address_from_assign(hlil, 1)
+				if var_addr == 0:
+					var_addr = self.get_address_from_assign(hlil, 0)
+				addresses.append(var_addr)
+				continue
+			if not is_call(hlil.operation): continue
+			call_addr = self.get_address_from_call(hlil, 0)
+			if call_addr == 0: continue
+			call_name = bv.get_function_at(call_addr).name
+			if call_name == 'TagAddClass':
+				for address in addresses:
+					self.add_class(address)
+				addresses = []
+			elif call_name == 'TagAddEnum':
+				for address in addresses:
+					self.add_enum(address)
+				break
 
 
 	def load_build_id(self, functions):
@@ -446,8 +481,13 @@ if __name__ == '__main__':
 	rtti_blob.find_classes_from_ctor(bv.get_functions_by_name('TagCreateClass'))
 	rtti_blob.add_class_from_registration(bv.get_functions_by_name('TagAddClass'))
 	rtti_blob.add_enum_from_registration(bv.get_functions_by_name('TagAddEnum'))
-	rtti_blob.load_registration(bv.get_functions_by_name('TagRegisterRTTI'))
+	rtti_registrations = bv.get_functions_by_name('TagRegisterRTTI')
+	if len(rtti_registrations) > 0:
+		rtti_blob.load_registrations(bv.get_functions_by_name('TagRegisterRTTI'))
+	else:
+		rtti_blob.load_stack(bv.get_functions_by_name("__chkstk"))
 	rtti_blob.load_build_id(bv.get_functions_by_name('LoadBuildId'))
+
 	print('done')
 
 	name = rtti_blob.build['Exec'] if 'Exec' in rtti_blob.build else 'Forge'
