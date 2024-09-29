@@ -4,6 +4,7 @@ namespace Jormungandr.CodeGen.RTTI;
 
 public record RTTIClass {
 	public List<RTTIClassField> Fields { get; set; } = [];
+
 	// public List<RTTIEnum> Enums { get; set; } = [];
 	public List<RTTIClassMethod> Methods { get; set; } = [];
 	public uint ParentHash { get; set; }
@@ -31,19 +32,23 @@ public record RTTIClass {
 		if (!name.All(x => char.IsAsciiLetterOrDigit(x) || x == '_')) {
 			throw new UnreachableException();
 		}
+
 		var parentName = rtti.GetName(ParentHash, "BaseObject");
 
 		using var writer = new StreamWriter(new FileStream(Path.Combine(path, name + ".txt"), FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite));
+		writer.Write($"// {ClassHash:x8}");
 		writer.Write($"class {name} ");
 		if (ParentHash > 1) {
 			writer.Write($": {parentName} ");
 		}
+
 		writer.Write("{");
 
 		if (Fields.Count == 0 && Methods.Count == 0) {
 			writer.WriteLine("}");
 			return;
 		}
+
 		writer.WriteLine();
 
 		foreach (var field in Fields) {
@@ -67,6 +72,7 @@ public record RTTIClass {
 				if ((arg.Flags & 0x2) == 2) {
 					writer.Write("ref ");
 				}
+
 				if ((arg.Flags & 0x1) == 1) {
 					writer.Write("out ");
 				}

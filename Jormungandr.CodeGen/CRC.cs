@@ -12,7 +12,6 @@ public sealed class CRC : HashAlgorithm {
 	private readonly bool ReflectOut;
 	private readonly uint[] Table;
 	private readonly uint Xor;
-	public uint Value { get; set; }
 
 	public CRC(uint polynomial, uint init, uint xor, bool reflectIn, bool reflectOut) {
 		Polynomial = polynomial;
@@ -26,6 +25,8 @@ public sealed class CRC : HashAlgorithm {
 		Reset();
 		CreateTable();
 	}
+
+	public uint Value { get; set; }
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	private void CreateTable() {

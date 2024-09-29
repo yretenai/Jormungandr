@@ -10,7 +10,7 @@ public record RTTIBlob {
 	public HashSet<string> Names { get; set; } = [];
 	public Dictionary<string, string> Build { get; set; } = [];
 
-	private Dictionary<uint, string> HashTable { get; set; } = [];
+	private Dictionary<uint, string> HashTable { get; } = [];
 
 	private static JsonSerializerOptions Options { get; } = new() {
 		PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -39,6 +39,7 @@ public record RTTIBlob {
 		if (crc.ComputeHash("123456789") != 0xCBF43926) {
 			throw new UnreachableException();
 		}
+
 		crc.Reset();
 
 		foreach (var name in rttiBlob.CollectNames()) {
