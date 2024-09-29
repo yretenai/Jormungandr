@@ -2,14 +2,26 @@ CLASS_HAS_NAME = True
 
 def read_pointer(reader):
 	if bv.arch.address_size == 1:
-		return reader.read8()
+		return reader.read8() or 0
 	if bv.arch.address_size == 2:
-		return reader.read16()
+		return reader.read16() or 0
 	if bv.arch.address_size == 4:
-		return reader.read32()
+		return reader.read32() or 0
 	if bv.arch.address_size == 8:
-		return reader.read64()
+		return reader.read64() or 0
 	return reader.read(bv.arch.address_size)
+
+
+def is_valid_pointer(address):
+	if address == 0: # nullptr is valid
+		return True
+	if address < bv.image_base:
+		return False
+	for section_name in bv.sections:
+		section = bv.sections[section_name]
+		if address in section:
+			return True
+	return False
 
 
 def address_to_section(address):
@@ -35,13 +47,13 @@ def is_call(op):
 class MethodArgumentRTTI:
 	address: str
 
-	field_type: int
-	parent_type: int
+	type_hash: int
+	array_size: int
+	type_flags: int
 	name_hash: int
 	name: str
 	flags: int
 
-	field_0: int
 	field_4: int
 	field_5: int
 	field_c: int
@@ -53,13 +65,11 @@ class MethodArgumentRTTI:
 
 		reader = bv.reader(address)
 
-		self.field_0 = reader.read32()
-		self.field_4 = reader.read8()
-		self.field_5 = reader.read8()
-		self.field_type = reader.read8()
-		self.parent_type = reader.read8()
-		self.name_hash = reader.read32()
-		self.field_c = reader.read32()
+		self.type_hash = reader.read32() or 0
+		self.array_size = reader.read16() or 0
+		self.type_flags = reader.read16() or 0
+		self.name_hash = reader.read32() or 0
+		self.field_c = reader.read32() or 0
 
 		val = bv.get_ascii_string_at(read_pointer(reader), 0)
 		if val is not None:
@@ -95,12 +105,12 @@ class MethodRTTI:
 			self.name = ""
 
 		arg_address = read_pointer(reader)
-		arg_count = reader.read16()
+		arg_count = reader.read16() or 0
 
-		self.field_12 = reader.read16()
-		self.name_hash = reader.read32()
-		self.flags = reader.read32()
-		self.field_1c = reader.read32()
+		self.field_12 = reader.read16() or 0
+		self.name_hash = reader.read32() or 0
+		self.flags = reader.read32() or 0
+		self.field_1c = reader.read32() or 0
 
 		if arg_count > 0x7fff:
 			return
@@ -136,9 +146,13 @@ class EnumRTTI:
 
 		reader = bv.reader(address)
 		values_address = read_pointer(reader)
+
+		if not is_valid_pointer(values_address):
+			return
+
 		self.name_hash = reader.read32()
 
-		value_count = reader.read32()
+		value_count = reader.read16()
 
 		if value_count > 0x7fff:
 			return
@@ -157,15 +171,12 @@ class FieldRTTI:
 	flags: int
 	name_hash: int
 	type_hash: int
-	field_type: int
-	parent_type: int
-	offset: int
+	array_size: int
+	type_flags: int
+	size_flags: int
 
 	# unknown fields
-	field_c: int
-	field_d: int
-	field_10: int
-	field_11: int
+	field_14: int
 	field_16: int
 
 	# field functions
@@ -179,17 +190,14 @@ class FieldRTTI:
 		self.address = address_to_section(address)
 
 		reader = bv.reader(address)
-		self.flags = reader.read32()
-		self.name_hash = reader.read32()
-		self.type_hash = reader.read32()
-		self.field_c = reader.read8()
-		self.field_d = reader.read8()
-		self.field_type = reader.read8()
-		self.parent_type = reader.read8()
-		self.field_10 = reader.read8()
-		self.field_11 = reader.read8()
-		self.offset = reader.read32()
-		self.field_16 = reader.read16()
+		self.flags = reader.read32() or 0
+		self.name_hash = reader.read32() or 0
+		self.type_hash = reader.read32() or 0
+		self.array_size = reader.read16() or 0
+		self.type_flags = reader.read16() or 0
+		self.size_flags = reader.read32() or 0
+		self.field_14 = reader.read16() or 0
+		self.field_16 = reader.read16() or 0
 
 		self.address_1 = address_to_section(read_pointer(reader))
 		self.address_2 = address_to_section(read_pointer(reader))
@@ -221,6 +229,8 @@ class ClassRTTI:
 	field_40: int
 	field_44: int
 	field_46: int
+	field_44_legacy: int
+	field_4c_legacy: int
 
 	# class functions
 	constructor_address: str
@@ -243,6 +253,9 @@ class ClassRTTI:
 		enums_address = read_pointer(reader)
 		methods_address = read_pointer(reader)
 
+		if not is_valid_pointer(fields_address) or not is_valid_pointer(enums_address) or not is_valid_pointer(methods_address):
+			return
+
 		if CLASS_HAS_NAME:
 			val = bv.get_ascii_string_at(read_pointer(reader), 0)
 			if val is not None:
@@ -250,22 +263,22 @@ class ClassRTTI:
 			else:
 				self.name = ""
 
-		self.parent_hash = reader.read32()
-		self.class_hash = reader.read32()
-		self.size = reader.read32()
-		self.field_24 = reader.read32()
-		self.flags = reader.read32()
-		self.field_2c = reader.read32()
-		self.field_30 = reader.read32()
-		self.field_34 = reader.read32()
-		self.field_38 = reader.read32()
-		self.field_3c = reader.read32()
-		self.field_40 = reader.read32()
+		self.parent_hash = reader.read32() or 0
+		self.class_hash = reader.read32() or 0
+		self.size = reader.read32() or 0
+		self.field_24 = reader.read32() or 0
+		self.flags = reader.read32() or 0
+		self.field_2c = reader.read32() or 0
+		self.field_30 = reader.read32() or 0
+		self.field_34 = reader.read32() or 0
+		self.field_38 = reader.read32() or 0
+		self.field_3c = reader.read32() or 0
+		self.field_40 = reader.read32() or 0
 		if CLASS_HAS_NAME:
-			self.field_44old = reader.read32()
-			self.field_40old = reader.read32()
-		self.field_44 = reader.read16()
-		self.field_46 = reader.read16()
+			self.field_44_legacy = reader.read32() or 0
+			self.field_4c_legacy = reader.read32() or 0
+		self.field_44 = reader.read16() or 0
+		self.field_46 = reader.read16() or 0
 
 		self.constructor_address = address_to_section(read_pointer(reader))
 		self.address_2 = address_to_section(read_pointer(reader))
@@ -278,10 +291,10 @@ class ClassRTTI:
 		self.deconstructor_address = address_to_section(read_pointer(reader))
 		self.address_10 = address_to_section(read_pointer(reader))
 
-		field_count = reader.read16()
-		enum_count = reader.read16()
-		method_count = reader.read16()
-		self.field_flags = reader.read16()
+		field_count = reader.read16() or 0
+		enum_count = reader.read16() or 0
+		method_count = reader.read16() or 0
+		self.field_flags = reader.read16() or 0
 
 		if field_count > 0x7fff or enum_count > 0x7fff or method_count > 0x7fff:
 			return
@@ -293,7 +306,7 @@ class ClassRTTI:
 			fields_address += field_size
 
 		self.enums = [None] * enum_count
-		enum_size = 0x8 + bv.arch.address_size
+		enum_size = 0x6 + bv.arch.address_size
 		for index in range(enum_count):
 			self.enums[index] = EnumRTTI(enums_address)
 			blob.enums[self.enums[index].name_hash] = self.enums[index]
@@ -322,29 +335,33 @@ class RTTIBlob():
 
 
 	def add_class(self, address: int):
-		if address == 0:
+		if address == 0 or not is_valid_pointer(address):
 			return
 		if address in visited:
 			return
 		visited.add(address)
 		print('loading class from address 0x%x' % (address))
 		rtti = ClassRTTI(address, self)
+		if rtti.class_hash is 0:
+			return
 		self.classes[rtti.class_hash] = rtti
 
 
 	def add_enum(self, address: int):
-		if address == 0:
+		if address == 0 or not is_valid_pointer(address):
 			return
 		if address in visited:
 			return
 		visited.add(address)
 		print('loading enum from address 0x%x' % (address))
 		rtti = EnumRTTI(address)
+		if rtti.name_hash is 0:
+			return
 		self.enums[rtti.name_hash] = rtti
 
 
 	def add_name(self, address: int):
-		if address == 0:
+		if address == 0 or not is_valid_pointer(address):
 			return
 		if address in visited:
 			return
@@ -356,7 +373,7 @@ class RTTIBlob():
 
 
 	def add_build_id(self, address: int):
-		if address == 0:
+		if address == 0 or not is_valid_pointer(address):
 			return
 		print('loading build_id from address 0x%x' % (address))
 		val = bv.get_ascii_string_at(address, 0)

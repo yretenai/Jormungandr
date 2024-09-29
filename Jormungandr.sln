@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jormungandr", "Jormungandr\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Watersports.Compression", "Watersports.Compression\Watersports.Compression.csproj", "{63FCDCA8-8DD0-407B-AF21-771FE9E584BE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jormungandr.CodeGen", "Jormungandr.CodeGen\Jormungandr.CodeGen.csproj", "{B6C94C36-CA86-473A-BD47-E2D4EB7CB704}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{63FCDCA8-8DD0-407B-AF21-771FE9E584BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{63FCDCA8-8DD0-407B-AF21-771FE9E584BE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{63FCDCA8-8DD0-407B-AF21-771FE9E584BE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6C94C36-CA86-473A-BD47-E2D4EB7CB704}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6C94C36-CA86-473A-BD47-E2D4EB7CB704}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6C94C36-CA86-473A-BD47-E2D4EB7CB704}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6C94C36-CA86-473A-BD47-E2D4EB7CB704}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
