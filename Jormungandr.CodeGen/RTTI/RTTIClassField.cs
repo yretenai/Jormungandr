@@ -19,7 +19,7 @@ public record RTTIClassField {
 
 	public static string GetTypeDescriptor(RTTIUbiType primary, RTTIUbiType secondary, int size, uint hash, RTTIBlob rtti) =>
 		primary switch {
-			RTTIUbiType.StaticArray => GetTypeDescriptor(secondary, RTTIUbiType.Unknown, size, hash, rtti),
+			RTTIUbiType.StaticArray => GetTypeDescriptor(secondary, RTTIUbiType.Unknown, size, hash, rtti) + $"[{size}]",
 			RTTIUbiType.BigArray or RTTIUbiType.SmallArray => GetTypeDescriptor(secondary, RTTIUbiType.Unknown, size, hash, rtti) + "[]",
 			RTTIUbiType.Enum => rtti.GetName(hash, "Enum"),
 			RTTIUbiType.DataDrivenEnum => rtti.GetName(hash, "DataDrivenEnum"),
