@@ -4,8 +4,6 @@ namespace Jormungandr.CodeGen.RTTI;
 
 public record RTTIClass {
 	public List<RTTIClassField> Fields { get; set; } = [];
-
-	// public List<RTTIEnum> Enums { get; set; } = [];
 	public List<RTTIClassMethod> Methods { get; set; } = [];
 	public uint ParentHash { get; set; }
 	public uint ClassHash { get; set; }

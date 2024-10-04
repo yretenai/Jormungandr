@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using Jormungandr.IO.Buffers;
 using Jormungandr.IO.Structures;
 using Jormungandr.Scimitar;
-using Watersports.Compression;
+using Waterfall.Compression;
 
 namespace Jormungandr.IO;
 
