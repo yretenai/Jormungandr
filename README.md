@@ -2,4 +2,8 @@
 
 Forge/Scimitar Engine Tooling
 
-Specialized on ACK (Valhalla)
+Specialized on Kingdoms (Valhalla)
+
+### Notice
+
+Jörmungandr and it's contributors are not affiliated with, or sponsored by, or authorized by, Ubisoft Entertainment SA. "Assassin's Creed" is a registered trademarks or trademarks of Ubisoft Entertainment SA. This project only serves research and education purposes.
