@@ -1,0 +1,21 @@
+TagAddEnum(manager, rtti)
+Registers enum RTTIs
+
+	4057               push    rdi
+	4156               push    r14
+	4883ec58           sub     rsp, 0x58
+	488bfa             mov     rdi, rdx
+	4c8bf1             mov     r14, rcx
+	4584c0             test    r8b, r8b
+	0f84????????       je
+
+	--
+
+	48895c2410         mov     qword [rsp+0x10], rbx
+	4889742418         mov     qword [rsp+0x18], rsi
+	57                 push    rdi
+	4883ec40           sub     rsp, 0x40
+	488bfa             mov     rdi, rdx
+	488bf1             mov     rsi, rcx
+	4584c0             test    r8b, r8b
+	0f84????????       je

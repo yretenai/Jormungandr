@@ -1,0 +1,10 @@
+TagRegisterRTTI(callbackStorage, callback)
+Used to get global type handlers
+
+	48c70100000000     mov     qword [rcx], 0x0
+	48895108           mov     qword [rcx+0x8], rdx
+	488b05????????     mov     rax, qword [rel .data]
+	488901             mov     qword [rcx], rax
+	488bc1             mov     rax, rcx
+	48890d????????     mov     qword [rel .data], rcx
+	c3                 retn

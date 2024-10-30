@@ -1,6 +1,9 @@
-CLASS_HAS_NAME = True
+CLASS_HAS_NAME = False
+
+rtti_logger = None
 
 def read_pointer(reader):
+	global bv
 	if bv.arch.address_size == 1:
 		return reader.read8() or 0
 	if bv.arch.address_size == 2:
@@ -13,6 +16,7 @@ def read_pointer(reader):
 
 
 def is_valid_pointer(address):
+	global bv
 	if address == 0: # nullptr is valid
 		return True
 	if address < bv.image_base:
@@ -25,6 +29,7 @@ def is_valid_pointer(address):
 
 
 def address_to_section(address):
+	global bv
 	if address == 0:
 		return 'nullptr'
 	if address < bv.image_base:
@@ -61,6 +66,7 @@ class MethodArgumentRTTI:
 
 
 	def __init__(self, address: int):
+		global bv
 		self.address = address_to_section(address)
 
 		reader = bv.reader(address)
@@ -94,6 +100,7 @@ class MethodRTTI:
 
 
 	def __init__(self, address: int):
+		global bv
 		self.address = address_to_section(address)
 
 		reader = bv.reader(address)
@@ -129,6 +136,7 @@ class EnumValueRTTI:
 
 
 	def __init__(self, address: int):
+		global bv
 		reader = bv.reader(address)
 		self.value = reader.read32()
 		self.name_hash = reader.read32()
@@ -142,6 +150,7 @@ class EnumRTTI:
 
 
 	def __init__(self, address: int):
+		global bv
 		self.address = address_to_section(address)
 
 		reader = bv.reader(address)
@@ -187,6 +196,7 @@ class FieldRTTI:
 
 
 	def __init__(self, address: int):
+		global bv
 		self.address = address_to_section(address)
 
 		reader = bv.reader(address)
@@ -246,6 +256,7 @@ class ClassRTTI:
 
 
 	def __init__(self, address: int, blob):
+		global bv
 		self.address = address_to_section(address)
 
 		reader = bv.reader(address)
@@ -342,7 +353,7 @@ class RTTIBlob():
 		visited.add(address)
 		print('loading class from address 0x%x' % (address))
 		rtti = ClassRTTI(address, self)
-		if rtti.class_hash is 0:
+		if rtti.class_hash == 0:
 			return
 		self.classes[rtti.class_hash] = rtti
 
@@ -355,12 +366,13 @@ class RTTIBlob():
 		visited.add(address)
 		print('loading enum from address 0x%x' % (address))
 		rtti = EnumRTTI(address)
-		if rtti.name_hash is 0:
+		if rtti.name_hash == 0:
 			return
 		self.enums[rtti.name_hash] = rtti
 
 
 	def add_name(self, address: int):
+		global bv
 		if address == 0 or not is_valid_pointer(address):
 			return
 		if address in visited:
@@ -373,6 +385,7 @@ class RTTIBlob():
 
 
 	def add_build_id(self, address: int):
+		global bv
 		if address == 0 or not is_valid_pointer(address):
 			return
 		print('loading build_id from address 0x%x' % (address))
@@ -386,6 +399,7 @@ class RTTIBlob():
 
 
 	def get_address_from_assign(self, hlil, index):
+		global bv
 		if hlil is None: return 0
 		if len(hlil.instruction_operands) < index + 1: return 0
 		op = hlil.instruction_operands[index]
@@ -440,6 +454,7 @@ class RTTIBlob():
 
 
 	def load_registrations(self, functions):
+		global bv
 		for func in functions:
 			for site in func.caller_sites:
 				dest = self.get_address_from_call(site.hlil, 2)
@@ -457,9 +472,8 @@ class RTTIBlob():
 
 
 	def load_registration(self, reg):
-		if reg is None or reg.hlil is None:
-			print("aaah!!! analyze 0x%x" % (site.address))
-			return
+		global bv, rtti_logger
+		print('loading rtti from address %s' % (reg.address_ranges))
 		addresses = []
 		for hlil in reg.hlil.instructions:
 			if hlil.operation == HighLevelILOperation.HLIL_VAR_INIT or hlil.operation == HighLevelILOperation.HLIL_ASSIGN:
@@ -471,7 +485,11 @@ class RTTIBlob():
 			if not is_call(hlil.operation): continue
 			call_addr = self.get_address_from_call(hlil, 0)
 			if call_addr == 0: continue
-			call_name = bv.get_function_at(call_addr).name
+			call_method = bv.get_function_at(call_addr)
+			if call_method is None:
+				rtti_logger.log_error("invalid call at rtti %s (0x%x)" % (reg.address_ranges, call_addr))
+				continue
+			call_name = call_method.name
 			if call_name == 'TagAddClass':
 				for address in addresses:
 					self.add_class(address)
@@ -482,30 +500,43 @@ class RTTIBlob():
 				break
 
 
-	def load_build_id(self, functions):
-		for func in functions:
-			for site in func.caller_sites:
-				dest = self.get_address_from_call(site.hlil, 1)
-				if dest != 0:
-					self.add_build_id(dest)
-					break
+	def load_build_id(self, data_vars):
+		if len(data_vars) > 0:
+			self.add_build_id(data_vars[0].address)
 
 if __name__ == '__main__':
-	import binaryninja # this will crash if you just try to run it in python, but executes fine in BinaryNinja
+	from binaryninja import * # this will crash if you just try to run it in python, but executes fine in BinaryNinja
+
+	rtti_logger = bv.create_logger("ForgeRTTI")
+
+	rtti_logger.log_info("Begin Scan")
 
 	rtti_blob = RTTIBlob()
+
+	rtti_logger.log_info("Processing Names")
 	rtti_blob.find_names(bv.get_functions_by_name('TagSetHeader'))
-	rtti_blob.find_classes_from_ctor(bv.get_functions_by_name('TagCreateClass'))
-	rtti_blob.add_class_from_registration(bv.get_functions_by_name('TagAddClass'))
-	rtti_blob.add_enum_from_registration(bv.get_functions_by_name('TagAddEnum'))
+
 	rtti_registrations = bv.get_functions_by_name('TagRegisterRTTI')
 	if len(rtti_registrations) > 0:
-		rtti_blob.load_registrations(bv.get_functions_by_name('TagRegisterRTTI'))
+		rtti_logger.log_info("Processing RTTI Registration")
+		rtti_blob.load_registrations(rtti_registrations)
 	else:
+		rtti_logger.log_info("Processing RTTI Stack")
 		rtti_blob.load_stack(bv.get_functions_by_name("__chkstk"))
-	rtti_blob.load_build_id(bv.get_functions_by_name('LoadBuildId'))
 
-	print('done')
+	rtti_logger.log_info("Processing Class Constructors")
+	rtti_blob.find_classes_from_ctor(bv.get_functions_by_name('TagCreateClass'))
+
+	rtti_logger.log_info("Processing Class Registration")
+	rtti_blob.add_class_from_registration(bv.get_functions_by_name('TagAddClass'))
+
+	rtti_logger.log_info("Processing Enum Registration")
+	rtti_blob.add_enum_from_registration(bv.get_functions_by_name('TagAddEnum'))
+
+	rtti_logger.log_info("Processing Build Identifier")
+	rtti_blob.load_build_id(bv.get_symbols_by_name("BuildId"))
+
+	rtti_logger.log_info("Done")
 
 	name = rtti_blob.build['Exec'] if 'Exec' in rtti_blob.build else 'Forge'
 	if name.lower().endswith('.exe'):
@@ -514,4 +545,4 @@ if __name__ == '__main__':
 	with open(name, 'w') as file:
 		json.dump(rtti_blob, file, default=vars)
 		file.write('\n')
-	print("wrote %s" % (name))
+	rtti_logger.log_info("Wrote %s" % (name))

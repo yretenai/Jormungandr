@@ -1,0 +1,18 @@
+TagCreateClass(rtti, buffer)
+Constructs a class via an rtti
+
+	4056               push    rsi
+	4883ec20           sub     rsp, 0x20
+	488bf1             mov     rsi, rcx
+	4885d2             test    rdx, rdx
+	75??               jne
+	4c8b05????????     mov     r8, qword [rel .data]
+
+	--
+
+	4057               push    rdi
+	4883ec20           sub     rsp, 0x20
+	488bf9             mov     rdi, rcx
+	4885d2             test    rdx, rdx
+	75??               jne
+	0fb691????????     movzx   edx, byte [rcx]

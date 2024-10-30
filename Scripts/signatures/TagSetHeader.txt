@@ -1,0 +1,56 @@
+TagSetHeader(serializer, name, zero, hash) (overloaded)
+Used to get names, usually stripped (not mandatory)
+
+	48895c2410         mov     qword [rsp+0x10], rbx
+	48896c2418         mov     qword [rsp+0x18], rbp
+	4889742420         mov     qword [rsp+0x20], rsi
+	57                 push    rdi
+	4154               push    r12
+	4156               push    r14
+	4157               push    r15
+	4883ec40           sub     rsp, 0x40
+	8b81b8000000       mov     eax, dword [rcx+0xb8]
+	33db               xor     ebx, ebx
+	488bac2480000000   mov     rbp, qword [rsp+0x80]
+	418bf1             mov     esi, r9d
+	4d8bf0             mov     r14, r8
+	4c8bfa             mov     r15, rdx
+	488bf9             mov     rdi, rcx
+	83f801             cmp     eax, 0x1
+
+	--
+
+	48895c2410         mov     qword [rsp+0x10], rbx
+	48896c2418         mov     qword [rsp+0x18], rbp
+	4889742420         mov     qword [rsp+0x20], rsi
+	57                 push    rdi
+	4156               push    r14
+	4157               push    r15
+	4883ec40           sub     rsp, 0x40
+	8b81b8000000       mov     eax, dword [rcx+0xb8]
+	33db               xor     ebx, ebx
+	488bac2480000000   mov     rbp, qword [rsp+0x80]
+	418bf1             mov     esi, r9d
+	4d8bf0             mov     r14, r8
+	4c8bfa             mov     r15, rdx
+	488bf9             mov     rdi, rcx
+	83f801             cmp     eax, 0x1
+
+	--
+
+	48896c2410         mov     qword [rsp+0x10], rbp
+	4889742418         mov     qword [rsp+0x18], rsi
+	48897c2420         mov     qword [rsp+0x20], rdi
+	4154               push    r12
+	4156               push    r14
+	4157               push    r15
+	4883ec40           sub     rsp, 0x40
+	8b81b0000000       mov     eax, dword [rcx+0xb0]
+	4533f6             xor     r14d, r14d
+	488bac2480000000   mov     rbp, qword [rsp+0x80]
+	4d8bf8             mov     r15, r8
+	418bf1             mov     esi, r9d
+	4c8be2             mov     r12, rdx
+	488bf9             mov     rdi, rcx
+	83f801             cmp     eax, 0x1
+

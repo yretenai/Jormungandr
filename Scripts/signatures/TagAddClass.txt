@@ -1,0 +1,19 @@
+TagAddClass(manager, rtti)
+Registers class RTTIs
+
+	4889542410         mov     qword [rsp+0x10], rdx
+	53                 push    rbx
+	55                 push    rbp
+	56                 push    rsi
+	57                 push    rdi
+	4156               push    r14
+	4883ec40           sub     rsp, 0x40
+	c605b4????????     mov     byte [rel .data]
+
+	--
+
+	488bc4             mov     rax, rsp
+	48895820           mov     qword [rax+0x20], rbx
+	4156               push    r14
+	4883ec70           sub     rsp, 0x70
+	48896808           mov     qword [rax+0x8], rbp

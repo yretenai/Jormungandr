@@ -1,0 +1,36 @@
+LoadBuildId(text, length, storage)
+Unique build tag
+
+	88542410           mov     byte [rsp+0x10], dl
+	56                 push    rsi
+	4155               push    r13
+	4883ec68           sub     rsp, 0x68
+	4c8bc9             mov     r9, rcx
+	488bf1             mov     rsi, rcx
+	4983e1f0           and     r9, 0xfffffffffffffff0
+	400fb6ce           movzx   ecx, sil
+	83e10f             and     ecx, 0xf
+	0f57c0             xorps   xmm0, xmm0
+	4d8be8             mov     r13, r8
+	66410f7401         pcmpeqb xmm0, xmmword [r9]
+	660fd7c0           pmovmskb eax, xmm0
+	d3e8               shr     eax, cl
+	d3e0               shl     eax, cl
+	85c0               test    eax, eax
+
+	--
+
+	4885c9             test    rcx, rcx
+	0f84????????       je
+	55                 push    rbp
+	56                 push    rsi
+	4157               push    r15
+	4883ec50           sub     rsp, 0x50
+	4d8bf8             mov     r15, r8
+	0fb6ea             movzx   ebp, dl
+	488bf1             mov     rsi, rcx
+	48c7c0ffffffff     mov     rax, 0xffffffffffffffff
+	48ffc0             inc     rax
+	803c0100           cmp     byte [rcx+rax], 0x0
+	75??               jne
+
