@@ -1,4 +1,4 @@
-CLASS_HAS_NAME = False
+CLASS_HAS_NAME = True
 
 rtti_logger = None
 
