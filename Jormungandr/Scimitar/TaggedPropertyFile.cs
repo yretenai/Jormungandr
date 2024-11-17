@@ -6,7 +6,7 @@ using Jormungandr.Scimitar.Structures;
 namespace Jormungandr.Scimitar;
 
 public class TaggedPropertyFile {
-	public TaggedPropertyFile(ForgeBundle bundle, RentedMemory<byte> buffer, ObjectId uid) {
+	public TaggedPropertyFile(AnvilBundle bundle, RentedMemory<byte> buffer, ObjectId uid) {
 		Bundle = bundle;
 		Buffer = buffer;
 		UId = uid;
@@ -20,7 +20,7 @@ public class TaggedPropertyFile {
 	}
 
 	public PropertyHeader Header { get; }
-	public ForgeBundle Bundle { get; }
+	public AnvilBundle Bundle { get; }
 	public RentedMemory<byte> Buffer { get; }
 	public ObjectId UId { get; }
 }

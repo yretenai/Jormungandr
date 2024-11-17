@@ -4,7 +4,7 @@ using Jormungandr.Scimitar;
 namespace Jormungandr.IO.Structures;
 
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
-public readonly record struct ForgeCentralFileTable {
+public readonly record struct AnvilCentralFileTable {
 	public int TotalFileCount { get; init; }
 	public int TotalDirectoryCount { get; init; }
 	public ObjectId MaxId { get; init; }

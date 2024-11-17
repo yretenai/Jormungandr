@@ -507,7 +507,7 @@ class RTTIBlob():
 if __name__ == '__main__':
 	from binaryninja import * # this will crash if you just try to run it in python, but executes fine in BinaryNinja
 
-	rtti_logger = bv.create_logger("ForgeRTTI")
+	rtti_logger = bv.create_logger("AnvilRTTI")
 
 	rtti_logger.log_info("Begin Scan")
 
@@ -538,7 +538,7 @@ if __name__ == '__main__':
 
 	rtti_logger.log_info("Done")
 
-	name = rtti_blob.build['Exec'] if 'Exec' in rtti_blob.build else 'Forge'
+	name = rtti_blob.build['Exec'] if 'Exec' in rtti_blob.build else 'Anvil'
 	if name.lower().endswith('.exe'):
 		name = name[:-4]
 	name += '.json'

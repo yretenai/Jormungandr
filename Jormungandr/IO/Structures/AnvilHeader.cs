@@ -4,7 +4,7 @@ using Jormungandr.Scimitar;
 namespace Jormungandr.IO.Structures;
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-public readonly record struct ForgeHeader {
+public readonly record struct AnvilHeader {
 	public StaticArray8 Magic { get; init; }
 	internal byte Padding { get; init; }
 	public uint Version { get; init; }

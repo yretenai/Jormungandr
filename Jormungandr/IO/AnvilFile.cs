@@ -6,11 +6,11 @@ using Jormungandr.Scimitar;
 
 namespace Jormungandr.IO;
 
-public sealed class ForgeFile : IDisposable, IEnumerable<ObjectId> {
-	public ForgeFile(Stream stream) {
+public sealed class AnvilFile : IDisposable, IEnumerable<ObjectId> {
+	public AnvilFile(Stream stream) {
 		BaseStream = stream;
 
-		Header = BaseStream.ReadExactly<ForgeHeader>();
+		Header = BaseStream.ReadExactly<AnvilHeader>();
 		if (Header.Magic != "scimitar"u8) {
 			throw new InvalidDataException("Not a scimitar file");
 		}
@@ -18,10 +18,10 @@ public sealed class ForgeFile : IDisposable, IEnumerable<ObjectId> {
 		Debug.Assert(Header.Version == 29);
 
 		BaseStream.Position = Header.FileAllocationTableOffset;
-		FileTableHeader = BaseStream.ReadExactly<ForgeCentralFileTable>();
+		FileTableHeader = BaseStream.ReadExactly<AnvilCentralFileTable>();
 
 		Debug.Assert(FileTableHeader.FileTableCount == 1);
-		FileTables = new PooledMemory<ForgeFileTable>(FileTableHeader.FileTableCount);
+		FileTables = new PooledMemory<AnvilFileTable>(FileTableHeader.FileTableCount);
 		BaseStream.Position = FileTableHeader.FileTableOffset;
 		BaseStream.ReadExactly(FileTables.Span);
 
@@ -35,7 +35,7 @@ public sealed class ForgeFile : IDisposable, IEnumerable<ObjectId> {
 			}
 
 			BaseStream.Position = fileTable.FirstFileOffset;
-			using var entries = new PooledMemory<ForgeFileEntry>(fileTable.FileCount);
+			using var entries = new PooledMemory<AnvilFileEntry>(fileTable.FileCount);
 			BaseStream.ReadExactly(entries.Span);
 			foreach (var entry in entries) {
 				FileEntries.Add(entry.Id, entry);
@@ -44,10 +44,10 @@ public sealed class ForgeFile : IDisposable, IEnumerable<ObjectId> {
 	}
 
 	public Stream BaseStream { get; }
-	public ForgeHeader Header { get; }
-	public ForgeCentralFileTable FileTableHeader { get; }
-	public RentedMemory<ForgeFileTable> FileTables { get; }
-	public Dictionary<ObjectId, ForgeFileEntry> FileEntries { get; } = [];
+	public AnvilHeader Header { get; }
+	public AnvilCentralFileTable FileTableHeader { get; }
+	public RentedMemory<AnvilFileTable> FileTables { get; }
+	public Dictionary<ObjectId, AnvilFileEntry> FileEntries { get; } = [];
 
 	public void Dispose() {
 		BaseStream.Dispose();
@@ -57,8 +57,8 @@ public sealed class ForgeFile : IDisposable, IEnumerable<ObjectId> {
 	public IEnumerator<ObjectId> GetEnumerator() => FileEntries.Keys.GetEnumerator();
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-	public ForgeBundle Open(ObjectId uid) =>
+	public AnvilBundle Open(ObjectId uid) =>
 		FileEntries.TryGetValue(uid, out var entry)
-			? new ForgeBundle(this, entry)
-			: new ForgeBundle(this, uid);
+			? new AnvilBundle(this, entry)
+			: new AnvilBundle(this, uid);
 }

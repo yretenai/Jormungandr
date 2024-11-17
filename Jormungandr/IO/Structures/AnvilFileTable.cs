@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 namespace Jormungandr.IO.Structures;
 
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
-public readonly record struct ForgeFileTable {
+public readonly record struct AnvilFileTable {
 	public int FileCount { get; init; }
 	public int DirectoryCount { get; init; }
 	public long FirstFileOffset { get; init; }

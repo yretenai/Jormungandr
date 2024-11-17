@@ -1,7 +1,7 @@
 namespace Jormungandr.IO.Structures;
 
 // compression types for version 29.
-public enum ForgeCompressionType : byte {
+public enum AnvilCompressionType : byte {
 	Lzo1x,
 	Lzo1xOpt,
 	Lzo2a,
