@@ -68,11 +68,12 @@ public sealed class MemoryReader(RentedMemory<byte> Buffer, bool DisposeOnExit =
 		}
 
 		var isUtf16 = flags.HasFlagFast(StringFlags.UTF16);
-		Debug.Assert(!isUtf16);
+		Trace.Assert(!isUtf16);
 		if (isUtf16) {
 			size *= 2;
 		}
 
+		var rawSize = size;
 		if (flags.HasFlagFast(StringFlags.BlockEncrypted)) { // align to 16 bytes
 			isEncrypted = true;
 			size = (int) ((size + 15) & 0xfffffff0L);
@@ -82,12 +83,20 @@ public sealed class MemoryReader(RentedMemory<byte> Buffer, bool DisposeOnExit =
 
 		var bytes = ReadBytes(size);
 		if (flags.HasFlagFast(StringFlags.BlockEncrypted)) {
-			// i assume this is a 128-bit block cipher as the string is aligned to 16-bytes.
-			// on the plus side, it does not appear to be using tweak keys like the old cipher.
-			// todo: find aes/blowfish cipher keys
+			// todo: find aes-128-cbc cipher keys
+			/*
+			isEncrypted = false;
+			using var aes = Aes.Create();
+			aes.Key = KEY_ACK;
+			Span<byte> target = stackalloc byte[rawSize];
+			ReadOnlySpan<byte> iv = stackalloc byte[16];
+			aes.DecryptCbc(bytes.Span, iv, target, PaddingMode.PKCS7);
+			target.CopyTo(bytes);
+			size = rawSize;
+			*/
 		} else if (flags.HasFlagFast(StringFlags.StepEncrypted)) {
 			isEncrypted = false;
-			StepEncoder.Decode(bytes.Span, size, tag, uid.Value);
+			StepEncoder.Decode<StepEncoder.ACK>(bytes.Span, tag);
 		}
 
 		return isEncrypted
@@ -95,6 +104,6 @@ public sealed class MemoryReader(RentedMemory<byte> Buffer, bool DisposeOnExit =
 			: (isUtf16
 				? Encoding.Unicode
 				: Encoding.UTF8)
-		   .GetString(bytes.Span);
+		   .GetString(bytes.Span[..size]);
 	}
 }

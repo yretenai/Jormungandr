@@ -1,31 +1,74 @@
+using System.Numerics;
 using System.Runtime.InteropServices;
 
 namespace Jormungandr.Cryptography;
 
-// https://github.com/parzivail/RainbowForge/blob/master/RainbowForge/Core/NameEncoding.cs
 public static class StepEncoder {
-	public const ulong FILENAME_ENCODING_BASE_KEY = 0xA860F0ECDE3339FB;
-	public const ulong FILENAME_ENCODING_ENTRY_KEY_STEP = 0x357267C76FFB9EB2;
-	public const ulong FILENAME_ENCODING_FILE_KEY_STEP = 0xE684BFF857699452;
+	public const ulong Xor = 0xb6539797901776ec;
+	public const ulong Step = 0xf3f1410c3eb549db;
 
-	private static ulong CalculateLengthTweak(ulong length) {
-		var lowerPart = length * 0x421;
-		var upperPart = (((length & 0xF) * 0x21) & 0x7F) + (length & 0xF0) << 25;
-		return lowerPart | upperPart;
+	public interface IStepKeyRing {
+		public static abstract ulong EKey { get; }
+		public static abstract ulong CKey { get; }
 	}
 
-	public static void Decode(Span<byte> bytes, int length, uint tag, ulong uid) {
-		var key = FILENAME_ENCODING_BASE_KEY + tag + ((ulong) tag << 32) + CalculateLengthTweak((ulong) length);
-		var aligned = (int) (length & 0xfffffff8L) + 8;
-		Span<byte> tmp = stackalloc byte[aligned];
-		bytes.CopyTo(tmp);
+	public class ACK : IStepKeyRing {
+		public static ulong EKey => 0x7e30bc13f40daedc;
+		public static ulong CKey => 0x1a920b3b7e13ec87;
+	}
 
-		var cipher = MemoryMarshal.Cast<byte, ulong>(tmp);
-		for (var i = 0; i < aligned >> 3; i++) {
-			cipher[i] ^= key;
-			key += FILENAME_ENCODING_FILE_KEY_STEP;
+	public class ACRIFT : IStepKeyRing {
+		public static ulong EKey => 0xc38338bba8b937d6;
+		public static ulong CKey => 0x5a28527772a4e7ed;
+	}
+
+	// This is disastrous code.
+	public static void Decode<TKeyRing>(Span<byte> bytes, uint tag) where TKeyRing : IStepKeyRing {
+		// Stage 1: Project-Specific key tweaking
+		Span<ulong> data = stackalloc ulong[1 + bytes.Length >> 3];
+		bytes.CopyTo(MemoryMarshal.AsBytes(data));
+
+		var akey = TKeyRing.EKey;
+		var ckey = TKeyRing.CKey;
+		var key = ((ulong) tag << 32) + tag; // equivalent to * 0x100000001
+
+		key += akey;
+
+		for (var i = 0; i < data.Length; ++i) {
+			data[i] ^= key;
+			key += ckey;
 		}
 
-		tmp[..length].CopyTo(bytes);
+		MemoryMarshal.AsBytes(data).CopyTo(bytes);
+
+		// Stage 2: Rotate right by 11, and Add
+		int cursor;
+		unchecked {
+			for (cursor = 0; cursor + 8 < bytes.Length; cursor += 8) {
+				var value = MemoryMarshal.Read<ulong>(bytes[cursor..]);
+				MemoryMarshal.Write(bytes[cursor..], BitOperations.RotateRight(value, 11) + Step);
+			}
+
+			for (; cursor + 4 < bytes.Length; cursor += 4) {
+				var value = MemoryMarshal.Read<uint>(bytes[cursor..]);
+				MemoryMarshal.Write(bytes[cursor..], BitOperations.RotateRight(value, 11) + (uint) Step);
+			}
+
+			for (; cursor + 2 < bytes.Length; cursor += 2) {
+				var value = MemoryMarshal.Read<ushort>(bytes[cursor..]);
+				MemoryMarshal.Write(bytes[cursor..], (ushort) ((value >> 11) | (value << 5)) + (ushort) Step);
+			}
+
+			for (; cursor < bytes.Length; cursor += 1) {
+				var value = (ulong) bytes[cursor];
+				bytes[cursor] = (byte) ((byte) ((value >> 3) | (value << 5)) + (byte) Step); // 11 % 8 = 3
+			}
+		}
+
+		// Stage 3: XOR
+		for (cursor = 0; cursor < bytes.Length; cursor += 1) {
+			var value = bytes[cursor];
+			bytes[cursor] = (byte) (value ^ (byte) (Xor >> (cursor & 0x3f)));
+		}
 	}
 }
