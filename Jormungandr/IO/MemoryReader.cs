@@ -73,29 +73,17 @@ public sealed class MemoryReader(RentedMemory<byte> Buffer, bool DisposeOnExit =
 			size *= 2;
 		}
 
-		var rawSize = size;
-		if (flags.HasFlagFast(StringFlags.BlockEncrypted)) { // align to 16 bytes
+		isEncrypted = flags.HasFlagFast(StringFlags.BlockEncrypted);
+		if (isEncrypted) {
+			// align to 16 bytes
 			isEncrypted = true;
-			size = (int) ((size + 15) & 0xfffffff0L);
-		} else {
-			isEncrypted = false;
+			size = (int) ((size + 0xf) & 0xfffffff0L);
+			// can't do decryption as the encryption key is not shipped
 		}
 
 		var bytes = ReadBytes(size);
-		if (flags.HasFlagFast(StringFlags.BlockEncrypted)) {
-			// todo: find aes-128-cbc cipher keys
-			/*
-			isEncrypted = false;
-			using var aes = Aes.Create();
-			aes.Key = KEY_ACK;
-			Span<byte> target = stackalloc byte[rawSize];
-			ReadOnlySpan<byte> iv = stackalloc byte[16];
-			aes.DecryptCbc(bytes.Span, iv, target, PaddingMode.PKCS7);
-			target.CopyTo(bytes);
-			size = rawSize;
-			*/
-		} else if (flags.HasFlagFast(StringFlags.StepEncrypted)) {
-			isEncrypted = false;
+		if (flags.HasFlagFast(StringFlags.StepEncrypted)) {
+			Debugger.Break();
 			StepEncoder.Decode<StepEncoder.ACK>(bytes.Span, tag);
 		}
 
