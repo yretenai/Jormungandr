@@ -40,6 +40,12 @@ internal static class Program {
 							enm.Dump(rtti, Path.Combine(outputPath, "Enums"));
 						}
 
+						using var fs = new FileStream(Path.Combine(outputPath, "MissingHashes.list"), FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
+						using var writer = new StreamWriter(fs);
+						foreach (var hash in rtti.MissingHashes) {
+							writer.WriteLine(hash.ToString("x8"));
+						}
+
 						break;
 					}
 					case "names": {

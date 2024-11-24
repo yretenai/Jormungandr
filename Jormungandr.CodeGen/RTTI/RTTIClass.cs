@@ -10,7 +10,7 @@ internal record RTTIClass {
 	public string? Name { get; set; }
 	public int Size { get; set; }
 	public uint Alignment { get; set; }
-	public ulong Flags { get; set; }
+	public RTTIClassFlags Flags { get; set; }
 	public uint FieldFlags { get; set; }
 	public uint DynamicPropertiesOffset { get; set; }
 	public ulong Signature { get; set; }
@@ -40,7 +40,7 @@ internal record RTTIClass {
 			writer.Write("}");
 		}
 
-		writer.WriteLine($"// Flags: {Flags:b16}, Index: 0x{Index:x8}, Signature: 0x{Signature:x16}, Dynamic Properties: 0x{DynamicPropertiesOffset:x}, Size: 0x{Size:x8}, Alignment: 0x{Alignment:x8}");
+		writer.WriteLine($" // Flags: {Flags:F}, Index: 0x{Index:x8}, Signature: 0x{Signature:x16}, Dynamic Properties: 0x{DynamicPropertiesOffset:x}, Size: 0x{Size:x8}, Alignment: 0x{Alignment:x8}");
 
 		if (Fields.Count == 0 && Methods.Count == 0) {
 			return;
@@ -49,7 +49,7 @@ internal record RTTIClass {
 		foreach (var field in Fields) {
 			writer.Write("\t");
 			writer.Write(field.TypeInfo.GetTypeDescriptor(rtti));
-			writer.Write($" {rtti.GetName(field.NameHash, "INVALID")}; // 0x{field.AccessInfo.Offset:x4} Type Id: {field.AccessInfo.TypeId}");
+			writer.Write($" {rtti.GetName(field.NameHash, "INVALID")}; // 0x{field.AccessInfo.Offset:x4}");
 			if (field.TypeInfo.IsBitField) {
 				writer.Write($", Bit Type: {field.TypeInfo.GetTypeDescriptor(rtti)}, Bit Offset: {field.AccessInfo.BitOffset}, Bit Size: {field.TypeInfo.BitSize}");
 			}
