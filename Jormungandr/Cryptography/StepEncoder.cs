@@ -7,25 +7,10 @@ public static class StepEncoder {
 	public const ulong Xor = 0xb6539797901776ec;
 	public const ulong Step = 0xf3f1410c3eb549db;
 
-	public interface IStepKeyRing {
-		public static abstract ulong EKey { get; }
-		public static abstract ulong CKey { get; }
-	}
-
-	public class ACK : IStepKeyRing {
-		public static ulong EKey => 0x7e30bc13f40daedc;
-		public static ulong CKey => 0x1a920b3b7e13ec87;
-	}
-
-	public class ACRIFT : IStepKeyRing {
-		public static ulong EKey => 0xc38338bba8b937d6;
-		public static ulong CKey => 0x5a28527772a4e7ed;
-	}
-
 	// This is disastrous code.
 	public static void Decode<TKeyRing>(Span<byte> bytes, uint tag) where TKeyRing : IStepKeyRing {
 		// Stage 1: Project-Specific key tweaking
-		Span<ulong> data = stackalloc ulong[1 + bytes.Length >> 3];
+		Span<ulong> data = stackalloc ulong[(1 + bytes.Length) >> 3];
 		bytes.CopyTo(MemoryMarshal.AsBytes(data));
 
 		var akey = TKeyRing.EKey;
@@ -70,5 +55,20 @@ public static class StepEncoder {
 			var value = bytes[cursor];
 			bytes[cursor] = (byte) (value ^ (byte) (Xor >> (cursor & 0x3f)));
 		}
+	}
+
+	public interface IStepKeyRing {
+		public static abstract ulong EKey { get; }
+		public static abstract ulong CKey { get; }
+	}
+
+	public class ACK : IStepKeyRing {
+		public static ulong EKey => 0x7e30bc13f40daedc;
+		public static ulong CKey => 0x1a920b3b7e13ec87;
+	}
+
+	public class ACRIFT : IStepKeyRing {
+		public static ulong EKey => 0xc38338bba8b937d6;
+		public static ulong CKey => 0x5a28527772a4e7ed;
 	}
 }

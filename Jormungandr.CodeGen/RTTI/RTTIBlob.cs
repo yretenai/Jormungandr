@@ -53,6 +53,7 @@ internal record RTTIBlob {
 			if (name.StartsWith("m_")) {
 				name = name[2..];
 			}
+
 			rttiBlob.HashTable[crc.ComputeHash(rawName)] = name;
 			crc.Reset();
 		}

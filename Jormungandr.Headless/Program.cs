@@ -23,6 +23,7 @@ internal class Program {
 					if (obj?.Header.ObjectName.Length > 0) {
 						name += "_" + obj.Header.ObjectName[..Math.Min(128, obj.Header.ObjectName.Length)];
 					}
+
 					Console.WriteLine(name);
 
 					if (!string.IsNullOrEmpty(outputPath)) {

@@ -3,9 +3,6 @@ using Jormungandr.IO;
 namespace Jormungandr.Scimitar.Structures;
 
 public record struct PropertyBlockAllocator {
-	public Memory<PropertyBlockAllocatorInfo> AllocatorInfo { get; init; }
-	public Memory<PropertyBlockAllocatorInfo> PartialInfo { get; init; }
-
 	public PropertyBlockAllocator(MemoryReader reader) {
 		var version = reader.Read<ushort>();
 		switch (version) {
@@ -29,4 +26,7 @@ public record struct PropertyBlockAllocator {
 			}
 		}
 	}
+
+	public Memory<PropertyBlockAllocatorInfo> AllocatorInfo { get; init; }
+	public Memory<PropertyBlockAllocatorInfo> PartialInfo { get; init; }
 }
