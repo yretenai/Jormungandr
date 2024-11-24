@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace Jormungandr.CodeGen.RTTI;
 
-public record RTTIBlob {
+internal record RTTIBlob {
 	public Dictionary<uint, RTTIClass> Classes { get; set; } = [];
 	public Dictionary<uint, RTTIEnum> Enums { get; set; } = [];
 	public HashSet<string> Names { get; set; } = [];

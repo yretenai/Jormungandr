@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace Jormungandr.CodeGen.RTTI;
 
-public record RTTIEnum {
+internal record RTTIEnum {
 	public List<RTTIEnumValue> Values { get; set; } = [];
 	public uint NameHash { get; set; }
 
@@ -14,7 +14,7 @@ public record RTTIEnum {
 		}
 
 		using var writer = new StreamWriter(new FileStream(Path.Combine(path, name + ".txt"), FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite));
-		writer.Write($"// {NameHash:x8}");
+		writer.WriteLine($"// {NameHash:x8}");
 		writer.Write($"enum {name} {{");
 
 		if (Values.Count == 0) {

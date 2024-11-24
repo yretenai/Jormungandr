@@ -49,20 +49,57 @@ def is_call(op):
 	return False
 
 
+class TypeInfo:
+	bits: int
+	is_primitive: bool
+	is_bit_field: bool
+	type_hash: int
+	array_size: int
+	type_id: int
+	bit_size: int
+	bit_field_size: int
+
+
+	def __init__(self, bits: int):
+		self.bits = bits
+
+		self.type_hash = bits & 0xffffffff
+		self.array_size = (bits >> 32) & 0x7fff
+		self.is_primitive = ((bits >> 47) & 1) == 1
+		self.type_id = (bits >> 48) & 0x3f
+		self.is_bit_field = ((bits >> 54) & 1) == 1
+		self.bit_size = (bits >> 55) & 0x3f
+		self.bit_field_size = (bits >> 61) & 3
+
+
+class AccessInfo:
+	bits: int
+	is_bit_field: bool
+	is_dynamic: bool
+	type_id: int
+	bit_offset: int
+	bit_size: int
+	offset: int
+
+
+	def __init__(self, bits: int):
+		self.bits = bits
+
+		self.type_id = bits & 0x1f
+		self.bit_offset = (bits >> 5) & 0x3f
+		self.bit_size = (bits >> 11) & 0x1f
+		self.is_bit_field = ((bits >> 16) & 1) == 1
+		self.is_dynamic = ((bits >> 17) & 1) == 1
+		self.offset = (bits >> 18) & 0xffffffff
+
+
 class MethodArgumentRTTI:
 	address: str
 
-	type_hash: int
-	array_size: int
-	type_flags: int
+	type_info: TypeInfo
 	name_hash: int
 	name: str
-	flags: int
-
-	field_4: int
-	field_5: int
-	field_c: int
-	field_1c: int
+	direction: int
 
 
 	def __init__(self, address: int):
@@ -71,11 +108,8 @@ class MethodArgumentRTTI:
 
 		reader = bv.reader(address)
 
-		self.type_hash = reader.read32() or 0
-		self.array_size = reader.read16() or 0
-		self.type_flags = reader.read16() or 0
+		self.type_info = TypeInfo(reader.read64() or 0)
 		self.name_hash = reader.read32() or 0
-		self.field_c = reader.read32() or 0
 
 		val = bv.get_ascii_string_at(read_pointer(reader), 0)
 		if val is not None:
@@ -83,8 +117,8 @@ class MethodArgumentRTTI:
 		else:
 			self.name = ""
 
-		self.flags = reader.read32()
-		self.field_1c = reader.read32()
+		self.direction = reader.read32()
+		reader.read32() # padding
 
 
 class MethodRTTI:
@@ -94,9 +128,6 @@ class MethodRTTI:
 	name_hash: int
 	arguments: [MethodArgumentRTTI]
 	flags: int
-
-	field_12: int
-	field_1c: int
 
 
 	def __init__(self, address: int):
@@ -112,12 +143,10 @@ class MethodRTTI:
 			self.name = ""
 
 		arg_address = read_pointer(reader)
-		arg_count = reader.read16() or 0
-
-		self.field_12 = reader.read16() or 0
+		arg_count = reader.read32() or 0
 		self.name_hash = reader.read32() or 0
 		self.flags = reader.read32() or 0
-		self.field_1c = reader.read32() or 0
+		reader.read32() # padding
 
 		if arg_count > 0x7fff:
 			return
@@ -176,19 +205,11 @@ class EnumRTTI:
 class FieldRTTI:
 	address: str
 
-	# known fields
 	flags: int
 	name_hash: int
-	type_hash: int
-	array_size: int
-	type_flags: int
-	size_flags: int
+	type_info: int
+	access_info: int
 
-	# unknown fields
-	field_14: int
-	field_16: int
-
-	# field functions
 	address_1: str
 	address_2: str
 	address_3: str
@@ -202,12 +223,8 @@ class FieldRTTI:
 		reader = bv.reader(address)
 		self.flags = reader.read32() or 0
 		self.name_hash = reader.read32() or 0
-		self.type_hash = reader.read32() or 0
-		self.array_size = reader.read16() or 0
-		self.type_flags = reader.read16() or 0
-		self.size_flags = reader.read32() or 0
-		self.field_14 = reader.read16() or 0
-		self.field_16 = reader.read16() or 0
+		self.type_info = TypeInfo(reader.read64() or 0)
+		self.access_info = AccessInfo(reader.read64() or 0)
 
 		self.address_1 = address_to_section(read_pointer(reader))
 		self.address_2 = address_to_section(read_pointer(reader))
@@ -218,7 +235,6 @@ class FieldRTTI:
 class ClassRTTI:
 	address: str
 
-	# known fields
 	fields: [FieldRTTI]
 	enums: [EnumRTTI]
 	methods: [MethodRTTI]
@@ -226,23 +242,18 @@ class ClassRTTI:
 	class_hash: int
 	name: str
 	size: int
+	dynamic_properties_offset: int
 	flags: int
 	field_flags: int
-
-	# unknowns
-	field_24: int
-	field_2c: int
-	field_30: int
-	field_34: int
-	field_38: int
-	field_3c: int
-	field_40: int
-	field_44: int
-	field_46: int
+	alignment: int
+	parent_class: int
+	signature: int
+	index: int
+	inheritance_min: int
+	inheritance_max: int
 	field_44_legacy: int
 	field_4c_legacy: int
 
-	# class functions
 	constructor_address: str
 	address_2: str
 	address_3: str
@@ -277,19 +288,16 @@ class ClassRTTI:
 		self.parent_hash = reader.read32() or 0
 		self.class_hash = reader.read32() or 0
 		self.size = reader.read32() or 0
-		self.field_24 = reader.read32() or 0
-		self.flags = reader.read32() or 0
-		self.field_2c = reader.read32() or 0
-		self.field_30 = reader.read32() or 0
-		self.field_34 = reader.read32() or 0
-		self.field_38 = reader.read32() or 0
-		self.field_3c = reader.read32() or 0
-		self.field_40 = reader.read32() or 0
+		self.dynamic_properties_offset = reader.read32() or 0
+		self.flags = reader.read64() or 0
+		self.parent_class = read_pointer(reader)
+		self.signature = reader.read64() or 0
+		self.index = reader.read32() or 0
 		if CLASS_HAS_NAME:
 			self.field_44_legacy = reader.read32() or 0
 			self.field_4c_legacy = reader.read32() or 0
-		self.field_44 = reader.read16() or 0
-		self.field_46 = reader.read16() or 0
+		self.inheritance_min = reader.read16() or 0
+		self.inheritance_max = reader.read16() or 0
 
 		self.constructor_address = address_to_section(read_pointer(reader))
 		self.address_2 = address_to_section(read_pointer(reader))
@@ -306,6 +314,7 @@ class ClassRTTI:
 		enum_count = reader.read16() or 0
 		method_count = reader.read16() or 0
 		self.field_flags = reader.read16() or 0
+		self.alignment = self.field_flags & 0x7f
 
 		if field_count > 0x7fff or enum_count > 0x7fff or method_count > 0x7fff:
 			return
@@ -516,13 +525,11 @@ if __name__ == '__main__':
 	rtti_logger.log_info("Processing Names")
 	rtti_blob.find_names(bv.get_functions_by_name('TagSetHeader'))
 
-	rtti_registrations = bv.get_functions_by_name('TagRegisterRTTI')
-	if len(rtti_registrations) > 0:
-		rtti_logger.log_info("Processing RTTI Registration")
-		rtti_blob.load_registrations(rtti_registrations)
-	else:
-		rtti_logger.log_info("Processing RTTI Stack")
-		rtti_blob.load_stack(bv.get_functions_by_name("__chkstk"))
+	rtti_logger.log_info("Processing RTTI Registration")
+	rtti_blob.load_registrations(bv.get_functions_by_name('TagRegisterRTTI'))
+
+	rtti_logger.log_info("Processing RTTI Stack")
+	rtti_blob.load_stack(bv.get_functions_by_name("__chkstk"))
 
 	rtti_logger.log_info("Processing Class Constructors")
 	rtti_blob.find_classes_from_ctor(bv.get_functions_by_name('TagCreateClass'))

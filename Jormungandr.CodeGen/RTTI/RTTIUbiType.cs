@@ -1,6 +1,6 @@
 namespace Jormungandr.CodeGen.RTTI;
 
-public enum RTTIUbiType {
+internal enum RTTIUbiType {
 	Bool = 0,
 	Char = 1,
 	UInt8 = 2,

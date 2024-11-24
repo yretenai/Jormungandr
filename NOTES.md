@@ -10,11 +10,11 @@ Unfortunately there's no real way to know these unless it gets leaked or they ch
 - AC4 - 4 - Black Flag
 - ACF - ? - Revelations
 - ACV - ? - Liberation
-- **ACU - Unity**
+- ACU - Unity
 - ACC - Comet - Rogue
-- **ACVI - Victory - Syndicate**
-- **ACE - Egypt - Origins**
-- **ACD - Dynasty - Odyssey**
+- ACVI - Victory - Syndicate
+- **ACE - Egypt - Origins
+- ACD - Dynasty - Odyssey
 - **ACK - Kingdoms - Valhalla**
 - **ACRIFT - Rift - Mirage**
 - ACR? - Red - Shadows
@@ -25,7 +25,6 @@ Unfortunately there's no real way to know these unless it gets leaked or they ch
 - TGT - ? - Breakpoint
 - MAD - ? - Riders Republic
 - **ORP - Orpheus - Immortals Fenyx Rising**
-- LTY - ? - Skull and Bones
 
 ### Non Standard Syntax
 

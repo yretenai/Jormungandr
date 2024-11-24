@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Jormungandr.CodeGen;
 
-public sealed class CRC : HashAlgorithm {
+internal sealed class CRC : HashAlgorithm {
 	private readonly uint Init;
 	private readonly uint Polynomial;
 	private readonly bool ReflectIn;

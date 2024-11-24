@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Jormungandr.IO;
 using Jormungandr.IO.Buffers;
 using Jormungandr.Scimitar.Structures;
@@ -13,9 +12,6 @@ public class TaggedPropertyFile {
 
 		using var reader = new MemoryReader(buffer, false);
 		Header = new PropertyHeader(UId, reader);
-		if (Header.UId != default) {
-			Debug.Assert(Header.UId == UId);
-		}
 		// todo: load properties.
 	}
 

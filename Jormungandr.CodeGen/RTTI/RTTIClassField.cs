@@ -1,32 +1,38 @@
 namespace Jormungandr.CodeGen.RTTI;
 
-public record RTTIClassField {
-	public uint Flags { get; set; }
-	public uint NameHash { get; set; }
+internal record struct RTTIAccessInfo {
+	public RTTIUbiType TypeId { get; set; }
+	public uint BitOffset { get; set; }
+	public uint BitSize { get; set; }
+	public bool IsBitField { get; set; }
+	public bool IsDynamic { get; set; }
+	public uint Offset { get; set; }
+}
+
+internal record struct RTTITypeInfo {
 	public uint TypeHash { get; set; }
 	public int ArraySize { get; set; }
-	public uint TypeFlags { get; set; }
-	public uint SizeFlags { get; set; }
-	public uint Field14 { get; set; }
-	public uint Field16 { get; set; }
+	public RTTIUbiType TypeId { get; set; }
+	public RTTIUbiType InnerTypeId => (RTTIUbiType) BitSize;
+	public uint BitSize { get; set; }
+	public uint BitFieldSize { get; set; }
+	public bool IsPrimitive { get; set; }
+	public bool IsBitField { get; set; }
 
-	public RTTIUbiType PrimaryType => (RTTIUbiType) (TypeFlags & 0x3f);
-	public RTTIUbiType SecondaryType => (RTTIUbiType) ((TypeFlags >> 7) & 0x3f);
-	public uint Offset => SizeFlags >> 18;
-	public uint BitSize => (SizeFlags & 0xf) + 1;
-	public uint BitMask => (SizeFlags >> 4) & 0x3fff;
-	public bool IsBitField => TypeFlags >> 14 == 1;
-
-	public static string GetTypeDescriptor(RTTIUbiType primary, RTTIUbiType secondary, int size, uint hash, RTTIBlob rtti) =>
-		primary switch {
-			RTTIUbiType.StaticArray => GetTypeDescriptor(secondary, RTTIUbiType.Unknown, size, hash, rtti) + $"[{size}]",
-			RTTIUbiType.BigArray or RTTIUbiType.SmallArray => GetTypeDescriptor(secondary, RTTIUbiType.Unknown, size, hash, rtti) + "[]",
-			RTTIUbiType.Enum => rtti.GetName(hash, "Enum"),
-			RTTIUbiType.DataDrivenEnum => rtti.GetName(hash, "DataDrivenEnum"),
-			RTTIUbiType.Handle or RTTIUbiType.SloppyHandle => "Handle<" + rtti.GetName(hash, "BaseClass") + ">",
-			RTTIUbiType.Reference => "Reference<" + rtti.GetName(hash, "BaseClass") + ">",
-			RTTIUbiType.Object or RTTIUbiType.BaseObject => rtti.GetName(hash, "BaseClass"),
-			RTTIUbiType.ObjectPtr or RTTIUbiType.BaseObjectPtr => rtti.GetName(hash, "BaseClass") + "*",
+	public string GetTypeDescriptor(RTTIBlob rtti) =>
+		TypeId switch {
+			RTTIUbiType.StaticArray => (this with {
+					TypeId = InnerTypeId,
+				}).GetTypeDescriptor(rtti) + $"[{ArraySize}]",
+			RTTIUbiType.BigArray or RTTIUbiType.SmallArray => (this with {
+				TypeId = InnerTypeId,
+			}).GetTypeDescriptor(rtti) + "[]",
+			RTTIUbiType.Enum => rtti.GetName(TypeHash, "Enum"),
+			RTTIUbiType.DataDrivenEnum => rtti.GetName(TypeHash, "DataDrivenEnum"),
+			RTTIUbiType.Handle or RTTIUbiType.SloppyHandle => "Handle<" + rtti.GetName(TypeHash, "BaseClass") + ">",
+			RTTIUbiType.Reference => "Reference<" + rtti.GetName(TypeHash, "BaseClass") + ">",
+			RTTIUbiType.Object or RTTIUbiType.BaseObject => rtti.GetName(TypeHash, "BaseClass"),
+			RTTIUbiType.ObjectPtr or RTTIUbiType.BaseObjectPtr => rtti.GetName(TypeHash, "BaseClass") + "*",
 			RTTIUbiType.Bool => "bool",
 			RTTIUbiType.Char => "char",
 			RTTIUbiType.UInt8 => "byte",
@@ -48,6 +54,11 @@ public record RTTIClassField {
 			RTTIUbiType.String or RTTIUbiType.WideString => "string",
 			_ => "UNKNOWN",
 		};
+}
 
-	public string GetFieldType(RTTIBlob rtti) => GetTypeDescriptor(PrimaryType, SecondaryType, ArraySize, TypeHash, rtti);
+internal record RTTIClassField {
+	public uint Flags { get; set; }
+	public uint NameHash { get; set; }
+	public RTTITypeInfo TypeInfo { get; set; } = new();
+	public RTTIAccessInfo AccessInfo { get; set; } = new();
 }

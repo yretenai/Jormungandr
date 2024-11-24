@@ -60,7 +60,7 @@ internal static class Program {
 	}
 
 	private static int PrintHelp() {
-		Console.Error.WriteLine("Usage: Jormungandr.CodeGen <mode> /path/to/rtti.json /path/to/names.txt /path/to/output");
+		Console.Error.WriteLine("Usage: Jormungandr.CodeGen <mode> /path/to/rtti.json /path/to/names.list /path/to/output");
 		Console.Error.WriteLine("Available Modes:");
 		Console.Error.WriteLine("\thelp - print this help text");
 		Console.Error.WriteLine("\tversion - print version and exit");

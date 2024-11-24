@@ -9,17 +9,9 @@ public record PropertyHeader {
 		ObjectName = reader.ReadString(Tag, uid, out var objectNameIsEncrypted);
 		ObjectNameIsEncrypted = objectNameIsEncrypted;
 
-		var hasBlob = reader.ReadFlag();
-		if (hasBlob) {
-			reader.Position += 3;
-			var size = reader.Read<int>() * 12;
-			reader.Position -= 7;
-			Blob = reader.ReadBytes(size + 7);
-		}
-
-		var hasUid = reader.ReadFlag();
-		if (hasUid) {
-			UId = reader.Read<ObjectId>();
+		var hasBlockInfo = reader.ReadFlag();
+		if (hasBlockInfo) {
+			BlockAllocator = new PropertyBlockAllocator(reader);
 		}
 	}
 
@@ -27,6 +19,5 @@ public record PropertyHeader {
 	public int Size { get; }
 	public uint Tag { get; }
 	public string ObjectName { get; }
-	public ObjectId UId { get; }
-	public Memory<byte> Blob { get; }
+	public PropertyBlockAllocator BlockAllocator { get; }
 }
