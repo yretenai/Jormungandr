@@ -1,3 +1,4 @@
 [submodule "Waterfall"]
 	path = Waterfall
 	url = git@github.com:yretenai/Waterfall.git
+	ignore = dirty
