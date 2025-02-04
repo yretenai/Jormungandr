@@ -13,7 +13,7 @@ Unfortunately there's no real way to know these unless it gets leaked or they ch
 - ACU - Unity
 - ACC - Comet - Rogue
 - ACVI - Victory - Syndicate
-- **ACE - Egypt - Origins
+- **ACE - Egypt - Origins**
 - ACD - Dynasty - Odyssey
 - **ACK - Kingdoms - Valhalla**
 - **ACRIFT - Rift - Mirage**
@@ -26,7 +26,7 @@ Unfortunately there's no real way to know these unless it gets leaked or they ch
 - MAD - ? - Riders Republic
 - **ORP - Orpheus - Immortals Fenyx Rising**
 
-### Non Standard Syntax
+### Non Standard Naming Pattern
 
 - Siege
 - For Honor
