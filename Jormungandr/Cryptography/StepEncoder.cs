@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace Jormungandr.Cryptography;
@@ -8,13 +9,13 @@ public static class StepEncoder {
 	public const ulong Step = 0xf3f1410c3eb549db;
 
 	// This is disastrous code.
-	public static void Decode<TKeyRing>(Span<byte> bytes, uint tag) where TKeyRing : IStepKeyRing {
+	public static void Decode(Span<byte> bytes, uint tag, KeyRing keyRing) {
 		// Stage 1: Project-Specific key tweaking
 		Span<ulong> data = stackalloc ulong[(1 + bytes.Length) >> 3];
 		bytes.CopyTo(MemoryMarshal.AsBytes(data));
 
-		var akey = TKeyRing.EKey;
-		var ckey = TKeyRing.CKey;
+		var akey = keyRing.EKey;
+		var ckey = keyRing.CKey;
 		var key = ((ulong) tag << 32) + tag; // equivalent to * 0x100000001
 
 		key += akey;
@@ -56,19 +57,21 @@ public static class StepEncoder {
 			bytes[cursor] = (byte) (value ^ (byte) (Xor >> (cursor & 0x3f)));
 		}
 	}
+}
 
-	public interface IStepKeyRing {
-		public static abstract ulong EKey { get; }
-		public static abstract ulong CKey { get; }
+public record KeyRing(ulong EKey, ulong CKey, byte[] AKey, byte[] IKey) {
+	public KeyRing(ulong EKey, ulong CKey, string KeyPath) : this(EKey, CKey, [], []) {
+		KeyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, KeyPath);
+		if (File.Exists(KeyPath)) {
+			var lines = File.ReadAllLines(KeyPath);
+			if (lines.Length >= 2 && lines[0].Length == lines[1].Length && lines[0].Length == 32) {
+				AKey = Convert.FromHexString(lines[0]);
+				IKey = Convert.FromHexString(lines[1]);
+			}
+		}
 	}
 
-	public class ACK : IStepKeyRing {
-		public static ulong EKey => 0x7e30bc13f40daedc;
-		public static ulong CKey => 0x1a920b3b7e13ec87;
-	}
+	public static KeyRing ACK => new(0x7e30bc13f40daedc, 0x1a920b3b7e13ec87, "ACK.key");
 
-	public class ACRIFT : IStepKeyRing {
-		public static ulong EKey => 0xc38338bba8b937d6;
-		public static ulong CKey => 0x5a28527772a4e7ed;
-	}
+	public static KeyRing ACRIFT => new(0xc38338bba8b937d6, 0x5a28527772a4e7ed, "ACRIFT.key");
 }

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using Jormungandr.Cryptography;
 using Jormungandr.IO.Buffers;
@@ -58,7 +59,7 @@ public sealed class MemoryReader(RentedMemory<byte> Buffer, bool DisposeOnExit =
 		return Encoding.UTF8.GetString(bytes.Span);
 	}
 
-	public string ReadString(uint tag, ObjectId uid, out bool isEncrypted) {
+	public string ReadString(uint tag, ObjectId uid, out bool isEncrypted, KeyRing? keyRing) {
 		var size = Read<int>();
 		var flags = (StringFlags) (size >> 29);
 		size &= 0x1fffffff;
@@ -73,18 +74,31 @@ public sealed class MemoryReader(RentedMemory<byte> Buffer, bool DisposeOnExit =
 			size *= 2;
 		}
 
-		isEncrypted = flags.HasFlagFast(StringFlags.BlockEncrypted);
+		var textLength = size;
+
+		isEncrypted = flags.HasFlagFast(StringFlags.StepEncrypted) || flags.HasFlagFast(StringFlags.BlockEncrypted);
 		if (isEncrypted) {
-			// align to 16 bytes
-			isEncrypted = true;
-			size = (int) ((size + 0xf) & 0xfffffff0L);
-			// can't do decryption as the encryption key is not shipped
+			if (flags.HasFlagFast(StringFlags.StepEncrypted)) {
+				// align to 8 bytes
+				size = (int) ((size + 0x7) & 0xfffffff8L);
+			} else if (flags.HasFlagFast(StringFlags.BlockEncrypted)) {
+				size = (int) ((size + 0xf) & 0xfffffff0L);
+			}
 		}
 
 		var bytes = ReadBytes(size);
-		if (flags.HasFlagFast(StringFlags.StepEncrypted)) {
-			Debugger.Break();
-			StepEncoder.Decode<StepEncoder.ACK>(bytes.Span, tag);
+
+		if (keyRing is not null && isEncrypted) {
+			if (flags.HasFlagFast(StringFlags.StepEncrypted) && keyRing is { CKey: > 0, EKey: > 0 }) {
+				Debugger.Break();
+				StepEncoder.Decode(bytes.Span, tag, keyRing);
+				isEncrypted = false;
+			} else if (flags.HasFlagFast(StringFlags.BlockEncrypted) && keyRing is { AKey.Length: > 0, IKey.Length: > 0 }) {
+				using var aes = Aes.Create();
+				aes.Key = keyRing.AKey;
+				aes.DecryptCbc(bytes.Span, keyRing.IKey, bytes.Span, PaddingMode.None); // actually PKCS7 but not if it's on a boundary.
+				isEncrypted = false;
+			}
 		}
 
 		return isEncrypted
@@ -92,6 +106,6 @@ public sealed class MemoryReader(RentedMemory<byte> Buffer, bool DisposeOnExit =
 			: (isUtf16
 				? Encoding.Unicode
 				: Encoding.UTF8)
-		   .GetString(bytes.Span[..size]);
+		   .GetString(bytes.Span[..textLength]);
 	}
 }

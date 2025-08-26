@@ -5,6 +5,15 @@ namespace Jormungandr.Headless;
 
 internal class Program {
 	private static void Main(string[] args) {
+		var acExe = Directory.EnumerateFiles(args[0], "AC*.exe").FirstOrDefault() ?? string.Empty;
+
+		var game = Path.GetFileNameWithoutExtension(acExe) switch {
+			           "ACValhalla" => ScimitarGame.ACK,
+			           "ACMirage" => ScimitarGame.ACRIFT,
+			           "ACShadows" => ScimitarGame.ACRED,
+			           _ => ScimitarGame.Unknown,
+		           };
+
 		foreach (var file in Directory.EnumerateFiles(args[0], "*.forge")) {
 			using var anvil = new AnvilFile(new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
 			var outputPath = default(string);
@@ -18,7 +27,7 @@ internal class Program {
 				var span = bundle.Headers.Span;
 				for (var i = 0; i < span.Length; ++i) {
 					var assetUid = span[i];
-					var obj = bundle.IsDataStream ? new TaggedPropertyFile(bundle, bundle.Assets[i], assetUid.ObjectId) : default;
+					var obj = bundle.IsDataStream ? new TaggedPropertyFile(bundle, bundle.Assets[i], assetUid.ObjectId, game) : default;
 					var name = assetUid.ObjectId.ToString();
 					if (obj?.Header.ObjectName.Length > 0) {
 						name += "_" + obj.Header.ObjectName[..Math.Min(128, obj.Header.ObjectName.Length)];
