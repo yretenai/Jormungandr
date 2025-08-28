@@ -149,23 +149,23 @@ public sealed class AnvilBundle : IDisposable {
 
 			var compressionType = block.IsUncompressed ? AnvilCompressionType.None : header.CompressionType;
 			var helperCompressionType = compressionType switch {
-				                            AnvilCompressionType.Lzo1x => CompressionType.LZO1,
-				                            AnvilCompressionType.Lzo1xOpt => CompressionType.LZO1,
-				                            AnvilCompressionType.Lzo2a => CompressionType.LZO2,
-				                            AnvilCompressionType.LZ4 => CompressionType.LZ4,
-				                            AnvilCompressionType.LZ4HC => CompressionType.LZ4,
-				                            AnvilCompressionType.OodleKraken => CompressionType.Oodle,
-				                            AnvilCompressionType.OodleKrakenOpt => CompressionType.Oodle,
-				                            AnvilCompressionType.OodleMermaid => CompressionType.Oodle,
-				                            AnvilCompressionType.OodleMermaidOpt => CompressionType.Oodle,
-				                            AnvilCompressionType.OodleSelkie => CompressionType.Oodle,
-				                            AnvilCompressionType.OodleSelkieOpt => CompressionType.Oodle,
-				                            AnvilCompressionType.None => CompressionType.None,
-				                            AnvilCompressionType.Zlib => CompressionType.Zlib,
-				                            AnvilCompressionType.ZStandard => CompressionType.Zstd,
-				                            AnvilCompressionType.ZStandardOpt => CompressionType.Zstd,
-				                            _ => throw new NotSupportedException(),
-			                            };
+				AnvilCompressionType.Lzo1x => CompressionType.LZO1,
+				AnvilCompressionType.Lzo1xOpt => CompressionType.LZO1,
+				AnvilCompressionType.Lzo2a => CompressionType.LZO2,
+				AnvilCompressionType.LZ4 => CompressionType.LZ4,
+				AnvilCompressionType.LZ4HC => CompressionType.LZ4,
+				AnvilCompressionType.OodleKraken => CompressionType.Oodle,
+				AnvilCompressionType.OodleKrakenOpt => CompressionType.Oodle,
+				AnvilCompressionType.OodleMermaid => CompressionType.Oodle,
+				AnvilCompressionType.OodleMermaidOpt => CompressionType.Oodle,
+				AnvilCompressionType.OodleSelkie => CompressionType.Oodle,
+				AnvilCompressionType.OodleSelkieOpt => CompressionType.Oodle,
+				AnvilCompressionType.None => CompressionType.None,
+				AnvilCompressionType.Zlib => CompressionType.Zlib,
+				AnvilCompressionType.ZStandard => CompressionType.Zstd,
+				AnvilCompressionType.ZStandardOpt => CompressionType.Zstd,
+				_ => throw new NotSupportedException(),
+			};
 
 			CompressionHelper.Decompress(helperCompressionType, compressedBlock, targetBlock);
 		}

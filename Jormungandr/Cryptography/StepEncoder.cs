@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace Jormungandr.Cryptography;
@@ -57,21 +56,4 @@ public static class StepEncoder {
 			bytes[cursor] = (byte) (value ^ (byte) (Xor >> (cursor & 0x3f)));
 		}
 	}
-}
-
-public record KeyRing(ulong EKey, ulong CKey, byte[] AKey, byte[] IKey) {
-	public KeyRing(ulong EKey, ulong CKey, string KeyPath) : this(EKey, CKey, [], []) {
-		KeyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, KeyPath);
-		if (File.Exists(KeyPath)) {
-			var lines = File.ReadAllLines(KeyPath);
-			if (lines.Length >= 2 && lines[0].Length == lines[1].Length && lines[0].Length == 32) {
-				AKey = Convert.FromHexString(lines[0]);
-				IKey = Convert.FromHexString(lines[1]);
-			}
-		}
-	}
-
-	public static KeyRing ACK => new(0x7e30bc13f40daedc, 0x1a920b3b7e13ec87, "ACK.key");
-
-	public static KeyRing ACRIFT => new(0xc38338bba8b937d6, 0x5a28527772a4e7ed, "ACRIFT.key");
 }

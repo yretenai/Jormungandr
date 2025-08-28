@@ -12,10 +12,10 @@ public class TaggedPropertyFile {
 		UId = uid;
 
 		var keyRing = game switch {
-			              ScimitarGame.ACK => KeyRing.ACK,
-			              ScimitarGame.ACRIFT => KeyRing.ACRIFT,
-			              _ => null,
-		              };
+			ScimitarGame.ACK => KeyRing.ACK,
+			ScimitarGame.ACRIFT => KeyRing.ACRIFT,
+			_ => null,
+		};
 
 		using var reader = new MemoryReader(buffer, false);
 		Header = new PropertyHeader(UId, reader, keyRing);

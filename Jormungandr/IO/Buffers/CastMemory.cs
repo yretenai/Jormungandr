@@ -2,7 +2,7 @@ namespace Jormungandr.IO.Buffers;
 
 // typecast cast memory owner.
 public class CastMemory<TTo, TFrom>(RentedMemory<TFrom> Owner, int Offset, int Length) : RentedMemory<TTo> where TTo : struct
-                                                                                                           where TFrom : struct {
+	where TFrom : struct {
 	public RentedMemory<TFrom> Owner { get; } = Owner;
 	public override int Length { get; } = Length;
 	public int Offset { get; } = Offset;

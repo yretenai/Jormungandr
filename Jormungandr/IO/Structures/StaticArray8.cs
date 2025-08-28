@@ -4,7 +4,7 @@ namespace Jormungandr.IO.Structures;
 
 [InlineArray(8)]
 public struct StaticArray8 : IEquatable<StaticArray8>, IEquatable<Span<byte>>, IEquatable<ReadOnlySpan<byte>>,
-                             IComparable<StaticArray8>, IComparable<Span<byte>>, IComparable<ReadOnlySpan<byte>> {
+	IComparable<StaticArray8>, IComparable<Span<byte>>, IComparable<ReadOnlySpan<byte>> {
 	public byte Value;
 
 	public bool Equals(StaticArray8 other) => ((Span<byte>) other).SequenceEqual(this);

@@ -8,37 +8,29 @@ internal class Program {
 		var acExe = Directory.EnumerateFiles(args[0], "AC*.exe").FirstOrDefault() ?? string.Empty;
 
 		var game = Path.GetFileNameWithoutExtension(acExe) switch {
-			           "ACValhalla" => ScimitarGame.ACK,
-			           "ACMirage" => ScimitarGame.ACRIFT,
-			           "ACShadows" => ScimitarGame.ACRED,
-			           _ => ScimitarGame.Unknown,
-		           };
+			"ACValhalla" => ScimitarGame.ACK,
+			"ACMirage" => ScimitarGame.ACRIFT,
+			"ACShadows" => ScimitarGame.ACRED,
+			_ => ScimitarGame.Unknown,
+		};
 
 		foreach (var file in Directory.EnumerateFiles(args[0], "*.forge")) {
 			using var anvil = new AnvilFile(new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
-			var outputPath = default(string);
-			if (args.Length > 1) {
-				outputPath = Path.Combine(args[1], Path.GetFileNameWithoutExtension(file));
-				Directory.CreateDirectory(outputPath);
-			}
-
 			foreach (var uid in anvil) {
 				using var bundle = anvil.Open(uid);
 				var span = bundle.Headers.Span;
 				for (var i = 0; i < span.Length; ++i) {
 					var assetUid = span[i];
 					var obj = bundle.IsDataStream ? new TaggedPropertyFile(bundle, bundle.Assets[i], assetUid.ObjectId, game) : default;
-					var name = assetUid.ObjectId.ToString();
-					if (obj?.Header.ObjectName.Length > 0) {
-						name += "_" + obj.Header.ObjectName[..Math.Min(128, obj.Header.ObjectName.Length)];
+					if (obj == null) {
+						continue;
 					}
 
-					Console.WriteLine(name);
-
-					if (!string.IsNullOrEmpty(outputPath)) {
-						using var buffer = new FileStream(Path.Combine(outputPath, name + "." + (obj?.Header.Tag.ToString("x8") ?? "bin")), FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-						buffer.Write(bundle.Assets[i].Span);
+					if (obj.Header is { ObjectNameIsEncrypted: true, ObjectName.Length: > 0 }) {
+						continue;
 					}
+
+					Console.WriteLine($"{uid.Value:x16} {obj.Header.ObjectName}");
 				}
 			}
 		}

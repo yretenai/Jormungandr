@@ -106,6 +106,6 @@ public sealed class MemoryReader(RentedMemory<byte> Buffer, bool DisposeOnExit =
 			: (isUtf16
 				? Encoding.Unicode
 				: Encoding.UTF8)
-		   .GetString(bytes.Span[..textLength]);
+			.GetString(bytes.Span[..textLength]);
 	}
 }
