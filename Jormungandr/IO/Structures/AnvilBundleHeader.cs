@@ -7,6 +7,6 @@ public readonly record struct AnvilBundleHeader {
 	public AnvilBundleIdentifier Identifier { get; init; }
 	public ushort Version { get; init; }
 	public AnvilCompressionType CompressionType { get; init; }
-	public AnvilBundleFlags Flags { get; init; }
+	public uint BlockSize { get; init; }
 	public int BlockCount { get; init; }
 }

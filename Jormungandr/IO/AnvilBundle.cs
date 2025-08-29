@@ -125,13 +125,22 @@ public sealed class AnvilBundle : IDisposable {
 			return RentedMemory<byte>.Empty;
 		}
 
-		var blocks = MemoryMarshal.Cast<byte, AnvilBundleBlock>(span[readBytes..])[..header.BlockCount];
-		readBytes += Unsafe.SizeOf<AnvilBundleBlock>() * header.BlockCount;
-
-		// loop 1: get total size
+		Span<AnvilBundleBlock> blocks = stackalloc AnvilBundleBlock[1];
 		var size = 0;
-		foreach (var block in blocks) {
-			size += block.UncompressedSize;
+		if ((header.BlockSize & 0x80000000) != 0) {
+			blocks = MemoryMarshal.Cast<byte, AnvilBundleBlock>(span[readBytes..])[..header.BlockCount];
+			readBytes += Unsafe.SizeOf<AnvilBundleBlock>() * header.BlockCount;
+
+			// loop 1: get total size
+			foreach (var block in blocks) {
+				size += block.UncompressedSize;
+			}
+		} else {
+			Debugger.Break();
+			blocks[0] = new AnvilBundleBlock {
+				CompressedSize = (int) header.BlockSize,
+				UncompressedSize = (int) header.BlockSize,
+			};
 		}
 
 		// loop 2: decompress

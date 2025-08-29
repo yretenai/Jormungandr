@@ -26,11 +26,11 @@ internal class Program {
 						continue;
 					}
 
-					if (obj.Header is { ObjectNameIsEncrypted: true, ObjectName.Length: > 0 }) {
+					if (obj.Header.ObjectNameIsEncrypted || obj.Header.ObjectName.Trim().Length == 0) {
 						continue;
 					}
 
-					Console.WriteLine($"{uid.Value:x16} {obj.Header.ObjectName}");
+					Console.WriteLine($"{uid.Value:x016} {assetUid.ObjectId.Value:x016} {obj.Header.ObjectName}");
 				}
 			}
 		}
