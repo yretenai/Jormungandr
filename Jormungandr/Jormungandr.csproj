@@ -11,4 +11,14 @@
 		<ProjectReference Include="..\Waterfall\Waterfall\Waterfall.csproj"/>
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="FileList\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="FileList\ACK.zst">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
 </Project>
